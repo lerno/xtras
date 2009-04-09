@@ -6,9 +6,7 @@ import java.util.*;
 
 import xtras.predicates.Predicates;
 
-/**
- * @author Christoffer Lerno 
- */
+/** @author Christoffer Lerno */
 
 @SuppressWarnings("unchecked")
 public class CollectionExtrasTest extends TestCase
@@ -202,5 +200,12 @@ public class CollectionExtrasTest extends TestCase
 	public void testEmpty() throws Exception
 	{
 		new CollectionExtras();
+	}
+
+	public void testGetAny() throws Exception
+	{
+		assertEquals("T", CollectionExtras.getAny(Arrays.asList("T", "E", "S", "T")));
+		assertEquals(null, CollectionExtras.getAny(new HashSet()));
+		assertEquals("T", CollectionExtras.getAny(new HashSet(Arrays.asList("T"))));
 	}
 }

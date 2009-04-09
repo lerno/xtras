@@ -338,4 +338,18 @@ public final class CollectionExtras
 		}
 		return map;
 	}
+
+	/**
+	 * Returns a single value from an iterable by returning the first
+	 * value returned by its iterator.
+	 *
+	 * @param iterable the iterable to get a value from.
+	 * @return the first value from tne iterator, or null if the iterator has no elements.
+	 */
+	public static <T> T getAny(Iterable<? extends T> iterable)
+	{
+		Iterator<? extends T> iterator = iterable.iterator();
+		return iterator.hasNext() ? iterator.next() : null;
+	}
+
 }

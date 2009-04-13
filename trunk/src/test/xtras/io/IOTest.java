@@ -5,8 +5,7 @@ package xtras.io;
 
 import junit.framework.*;
 
-import java.net.Socket;
-import java.net.ServerSocket;
+import java.net.*;
 import java.io.*;
 
 import xtras.lang.StringExtras;
@@ -112,25 +111,25 @@ public class IOTest extends TestCase
 	}
 
 
-	@SuppressWarnings({"SocketOpenedButNotSafelyClosed"})
-	public void testGetIP() throws Exception
+	public void testIsHostReachableFailed() throws Exception
 	{
-		ServerSocket socket = null;
-		try
+		DynamicSocketImplFactory.setNextSocket(new SocketImplAdaptor()
 		{
-			socket = new ServerSocket(19999);
-			assertEquals(true, IO.isHostReachable(IO.getIP(), 19999));
-			assertEquals(false, IO.isHostReachable(IO.getIP(), 19998));
-		}
-		finally
-		{
-			IO.closeSilently(socket);
-		}
+			protected void connect(SocketAddress anAddress, int timeout) throws IOException
+			{
+				throw new IOException("Meh");
+			}
+		});
+		assertFalse(IO.isHostReachable("127.0.0.1", 9999));
 	}
 
-	/**
- * @author Christoffer Lerno
-	 */
+	public void testIsHostReachable() throws Exception
+	{
+		DynamicSocketImplFactory.setNextSocket(new SocketImplAdaptor());
+		assertTrue(IO.isHostReachable("127.0.0.1", 9998));
+	}
+
+	/** @author Christoffer Lerno */
 	@SuppressWarnings({"IOResourceOpenedButNotSafelyClosed"})
 	public static class TableModelTest extends TestCase
 	{

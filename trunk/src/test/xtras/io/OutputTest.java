@@ -4,7 +4,6 @@ package xtras.io;
  */
 
 import junit.framework.*;
-import xtras.io.Output;
 import xtras.lang.StringExtras;
 
 import java.io.ByteArrayOutputStream;

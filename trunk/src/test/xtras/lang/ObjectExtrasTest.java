@@ -1,7 +1,6 @@
 package xtras.lang;
 
 import junit.framework.TestCase;
-import xtras.lang.ObjectExtras;
 
 /** @author Christoffer Lerno */
 public class ObjectExtrasTest extends TestCase

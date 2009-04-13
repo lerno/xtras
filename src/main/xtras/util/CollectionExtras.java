@@ -1,9 +1,7 @@
 package xtras.util;
 
 import xtras.util.predicates.Predicates;
-import xtras.util.ArrayExtras;
 import xtras.lang.StringExtras;
-import xtras.util.Predicate;
 
 import java.util.*;
 

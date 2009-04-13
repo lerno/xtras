@@ -4,7 +4,6 @@ package xtras.util;
  */
 
 import junit.framework.*;
-import xtras.ArrayExtras;
 
 import java.util.Arrays;
 

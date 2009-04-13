@@ -1,8 +1,5 @@
 package xtras.util;
 
-import xtras.util.CollectionExtras;
-import xtras.util.ArrayIterator;
-
 import java.util.Iterator;
 
 /**

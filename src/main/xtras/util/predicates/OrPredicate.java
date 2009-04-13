@@ -1,7 +1,6 @@
 package xtras.util.predicates;
 
 import xtras.util.Predicate;
-import xtras.util.predicates.MultiPredicate;
 
 import java.util.Collection;
 

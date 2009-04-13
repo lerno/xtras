@@ -1,14 +1,13 @@
 package xtras.io;
 
-import xtras.output.TableModel;
-import xtras.output.PrintStreamOut;
-import xtras.output.PrintWriterOut;
-import xtras.output.IndexedTableModel;
+import java.io.OutputStream;
+import java.io.PrintStream;
+import java.io.PrintWriter;
+import java.io.Writer;
 
-import java.io.*;
 
 /** @author Christoffer Lerno */
-public class Output
+class Output
 {
 	private final Out m_writer;
 	private TableModel m_table;
@@ -18,6 +17,7 @@ public class Output
 	 *
 	 * @param stream the stream to use for output.
 	 */
+	@SuppressWarnings({"IOResourceOpenedButNotSafelyClosed"})
 	public Output(OutputStream stream)
 	{
 		this(new PrintStreamOut(stream instanceof PrintStream
@@ -30,6 +30,7 @@ public class Output
 	 *
 	 * @param writer the writer to use for output.
 	 */
+	@SuppressWarnings({"IOResourceOpenedButNotSafelyClosed"})
 	public Output(Writer writer)
 	{
 		this(new PrintWriterOut(writer instanceof PrintWriter

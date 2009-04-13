@@ -6,9 +6,6 @@ import java.util.Collections;
 import java.util.Arrays;
 
 import xtras.util.Predicate;
-import xtras.util.predicates.AndPredicate;
-import xtras.util.predicates.OrPredicate;
-import xtras.util.predicates.Predicates;
 
 /**
  * @author Christoffer Lerno

@@ -1,7 +1,6 @@
 package xtras.lang;
 
 import junit.framework.*;
-import xtras.lang.ByteExtras;
 
 /**
  * @author Christoffer Lerno 

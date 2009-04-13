@@ -1,8 +1,6 @@
 package xtras.util;
 
-import java.util.HashMap;
-import java.util.Collection;
-import java.util.Iterator;
+import java.util.*;
 
 /** @author Christoffer Lerno */
 public class CountedSet<C> extends HashMap<C, Integer>
@@ -136,10 +134,15 @@ public class CountedSet<C> extends HashMap<C, Integer>
 	 * of the runtime type of every element in this set.
 	 * @throws NullPointerException if the specified array is <tt>null</tt>.
 	 */
+	@SuppressWarnings({"SuspiciousToArrayCall"})
 	public <T> T[] toArray(T[] a)
 	{
 		return keySet().toArray(a);
 	}
+
+
+
+
 
 	/**
 	 * Returns <tt>true</tt> if this set contains all of the elements of the

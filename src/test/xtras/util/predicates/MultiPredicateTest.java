@@ -8,9 +8,6 @@ import junit.framework.*;
 import java.util.Collection;
 import java.util.Arrays;
 
-import xtras.util.predicates.MultiPredicate;
-import xtras.util.predicates.Predicates;
-
 @SuppressWarnings("unchecked")
 public class MultiPredicateTest extends TestCase
 {

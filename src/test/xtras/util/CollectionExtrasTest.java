@@ -6,8 +6,6 @@ import java.util.*;
 
 import xtras.util.predicates.Predicates;
 import xtras.lang.StringExtras;
-import xtras.util.CollectionExtras;
-import xtras.util.CountedSet;
 
 /** @author Christoffer Lerno */
 
@@ -90,11 +88,11 @@ public class CollectionExtrasTest extends TestCase
 		CountedSet<String> countedSet = new CountedSet<String>(Arrays.asList("Arne", "Arne", "Sune"));
 		while ("Arne".equals(CollectionExtras.selectWeightedRandom(countedSet)))
 		{
-			;
+			// Do nothing
 		}
 		while ("Sune".equals(CollectionExtras.selectWeightedRandom(countedSet)))
 		{
-			;
+			// Do nothing.
 		}
 	}
 
@@ -102,11 +100,11 @@ public class CollectionExtrasTest extends TestCase
 	{
 		Collection<Integer> temp = new ArrayList<Integer>();
 		assertFalse(CollectionExtras.hasDuplicates(temp));
-		temp.add(Integer.valueOf(3));
+		temp.add(3);
 		assertFalse(CollectionExtras.hasDuplicates(temp));
-		temp.add(Integer.valueOf(4));
+		temp.add(4);
 		assertFalse(CollectionExtras.hasDuplicates(temp));
-		temp.add(Integer.valueOf(3));
+		temp.add(3);
 		assertTrue(CollectionExtras.hasDuplicates(temp));
 	}
 

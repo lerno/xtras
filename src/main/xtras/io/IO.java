@@ -193,55 +193,5 @@ public class IO
 			IO.closeSilently(testSocket);
 		}
 	}
-	
-	private static Map<String, String> collectAllIp(boolean preferIPv6) throws SocketException
-	{
-		Map<String, String> map = new HashMap<String, String>();
-		Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
-		while (interfaces.hasMoreElements())
-		{
-			NetworkInterface networkInterface = interfaces.nextElement();
-			Enumeration<InetAddress> addresses = networkInterface.getInetAddresses();
-			while (addresses.hasMoreElements())
-			{
-				InetAddress address = addresses.nextElement();
-				if ((address instanceof Inet4Address && !preferIPv6)
-				    || (address instanceof Inet6Address && preferIPv6)
-				    || !map.containsKey(networkInterface.getDisplayName()))
-				{
-					map.put(networkInterface.getDisplayName(), address.getHostAddress());
-				}
-			}
-		}
-		return map;
-	}
-	/**
-	 * Returns the ip of first en* interface for this machine, if not available,
-	 * InetAddress.getLocalHost() will be used.
-	 * <p>
-	 * If any exceptions are thrown then method will default
-	 * to 127.0.0.1.
-	 *
-	 * @return The ip or 127.0.0.1 if we fail to extract the ip.
-	 */
-	public static String getIP()
-	{
-		try
-		{
-			Map<String, String> map = collectAllIp(false);
-			for (int i = 0; i < 20; i++)
-			{
-				String ip = map.get("en" + i);
-				if (ip != null) return ip;
-			}
-			return InetAddress.getLocalHost().getHostAddress();
-		}
-		catch (IOException e)
-		{
-			// Our "best guess"
-			return "127.0.0.1";
-		}
-	}
-
 
 }

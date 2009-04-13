@@ -4,7 +4,6 @@ package xtras.lang;
  */
 
 import junit.framework.*;
-import xtras.lang.StringExtras;
 import xtras.util.CollectionExtras;
 
 import java.util.Arrays;
@@ -27,6 +26,7 @@ public class StringExtrasTest extends TestCase
 		assertEquals(true, StringExtras.FILTER_EMPTY_STRING.evaluate(""));
 		assertEquals(false, StringExtras.FILTER_EMPTY_STRING.evaluate("x"));
 	}
+
 	public void testCapsToCamel() throws Exception
 	{
 		assertEquals("A", StringExtras.capsToCamel("_A_"));
@@ -172,14 +172,14 @@ public class StringExtrasTest extends TestCase
 
 	public void testTimeDifferenceAsString() throws Exception
 	{
-		assertEquals("1 second", StringExtras.timeDifferenceAsString(1000));
-		assertEquals("2 seconds", StringExtras.timeDifferenceAsString(2000));
-		assertEquals("59 seconds", StringExtras.timeDifferenceAsString(59000));
-		assertEquals("1 min 0 sec", StringExtras.timeDifferenceAsString(60000));
-		assertEquals("59 min 59 sec", StringExtras.timeDifferenceAsString(3599000));
-		assertEquals("1h 0m 0s", StringExtras.timeDifferenceAsString(3600000));
-		assertEquals("23h 59m 59s", StringExtras.timeDifferenceAsString(3600000 * 24 - 1000));
-		assertEquals("1d 0h 0m 0s", StringExtras.timeDifferenceAsString(3600000 * 24));
+		assertEquals("1 second", xtras.time.Time.timeIntervalAsPrettyString(1000));
+		assertEquals("2 seconds", xtras.time.Time.timeIntervalAsPrettyString(2000));
+		assertEquals("59 seconds", xtras.time.Time.timeIntervalAsPrettyString(59000));
+		assertEquals("1 min 0 sec", xtras.time.Time.timeIntervalAsPrettyString(60000));
+		assertEquals("59 min 59 sec", xtras.time.Time.timeIntervalAsPrettyString(3599000));
+		assertEquals("1h 0m 0s", xtras.time.Time.timeIntervalAsPrettyString(3600000));
+		assertEquals("23h 59m 59s", xtras.time.Time.timeIntervalAsPrettyString(3600000 * 24 - 1000));
+		assertEquals("1d 0h 0m 0s", xtras.time.Time.timeIntervalAsPrettyString(3600000 * 24));
 	}
 
 	public void testTrimFirst() throws Exception
@@ -218,4 +218,7 @@ public class StringExtrasTest extends TestCase
 		assertEquals("1 sune", StringExtras.numberWithPluralS(1, "sune"));
 		assertEquals("2 sunes", StringExtras.numberWithPluralS(2, "sune"));
 	}
+
+
+
 }

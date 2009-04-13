@@ -102,7 +102,13 @@ public class IO
 			stream = new FileInputStream(file);
 			int size = stream.available();
 			byte[] allBytes = new byte[size];
-			stream.read(allBytes);
+			int read = 0;
+			while (read < allBytes.length)
+			{
+				int bytesRead = stream.read(allBytes, read, allBytes.length - read);
+				if (bytesRead == -1) throw new EOFException("Unexpected EOF.");
+				read += bytesRead;
+			}
 			return new String(allBytes);
 		}
 		finally

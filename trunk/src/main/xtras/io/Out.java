@@ -10,4 +10,5 @@ public interface Out
 	void println();
 
 	void print(String s);
+
 }

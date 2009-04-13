@@ -281,36 +281,6 @@ public final class StringExtras
 	}
 
 	/**
-	 * Return a string describing the time difference as a string.
-	 *
-	 * @param timeDifferenceInMs the time difference in milliseconds.
-	 * @return a string of the format x seconds/x minutes/x hours/x days.
-	 */
-	public static String timeDifferenceAsString(long timeDifferenceInMs)
-	{
-		long timeDifferenceInSeconds = timeDifferenceInMs / 1000;
-		int seconds = (int) (timeDifferenceInSeconds % 60);
-		timeDifferenceInSeconds /= 60;
-		int minutes = (int) (timeDifferenceInSeconds % 60);
-		timeDifferenceInSeconds /= 60;
-		int hours = (int) (timeDifferenceInSeconds % 24);
-		timeDifferenceInSeconds /= 24;
-		if (timeDifferenceInSeconds > 0)
-		{
-			return String.format("%dd %dh %dm %ds", timeDifferenceInSeconds, hours, minutes, seconds);
-		}
-		else if (hours > 0)
-		{
-			return String.format("%dh %dm %ds", hours, minutes, seconds);
-		}
-		else if (minutes > 0)
-		{
-			return String.format("%d min %d sec", minutes, seconds);
-		}
-		return String.format("%d second%s", seconds, seconds == 1 ? "" : "s");
-	}
-
-	/**
 	 * Removes whitespace from the beginning of a string, returning a new string with
 	 * the whitespace removed.
 	 *
@@ -377,15 +347,15 @@ public final class StringExtras
 			int space = currentLine.length() == lineLength ? lineLength : currentLine.substring(0,
 			                                                                                    lineLength +
 			                                                                                    1).lastIndexOf(' ');
-			if (space != -1)
-			{
-				line.add(currentLine.substring(0, space));
-				currentLine = currentLine.substring(space + 1).trim();
-			}
-			else
+			if (space == -1)
 			{
 				line.add(currentLine.substring(0, lineLength));
 				currentLine = currentLine.substring(lineLength).trim();
+			}
+			else
+			{
+				line.add(currentLine.substring(0, space));
+				currentLine = currentLine.substring(space + 1).trim();
 			}
 		}
 		if (currentLine.length() > 0 || line.isEmpty())
@@ -412,4 +382,6 @@ public final class StringExtras
 		}
 		return builder.toString();
 	}
+
+
 }

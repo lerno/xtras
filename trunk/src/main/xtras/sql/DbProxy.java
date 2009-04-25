@@ -2,7 +2,6 @@ package xtras.sql;
 
 import java.sql.SQLException;
 import java.sql.ResultSet;
-import java.util.List;
 
 /** @author Christoffer Lerno */
 public interface DbProxy
@@ -20,10 +19,6 @@ public interface DbProxy
 	void close();
 
 	ResultSet query(String query, Object... args) throws SQLException;
-
-	<T> List<T> queryAll(String query, Object... args) throws SQLException;
-
-	<T> T queryOne(String query, Object... args) throws SQLException;
 
 	<T> T insert(String insert, Object... args) throws SQLException;
 

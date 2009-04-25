@@ -60,10 +60,10 @@ public class PooledDbProxyTest extends TestCase
 
 	public void testFailCommit() throws Exception
 	{
-		m_db.update("drop table if exists @test.people");
-		m_db.update("create table @test.people (name, occupation);");
+		m_db.update("drop table if exists <test>.people");
+		m_db.update("create table <test>.people (name, occupation);");
 		m_db.beginTransaction();
-		assertEquals(1, m_db.insert("insert into @test.people values (?, ?)", "Sune", "Programmer"));
+		assertEquals(1, m_db.insert("insert into <test>.people values (?, ?)", "Sune", "Programmer"));
 		DbConnection dbConnection = m_db.getConnection();
 		Connection c = dbConnection.getConnection();
 		c.close();
@@ -78,15 +78,16 @@ public class PooledDbProxyTest extends TestCase
 		}
 		assertEquals(false, dbConnection.isInTransaction());
 		assertEquals(false, dbConnection.isOpen());
-		assertEquals(null, m_db.queryOne("select * from @test.people"));
+		assertEquals(false, m_db.query("select * from <test>.people").next());
+		m_db.close();
 	}
 
 	@SuppressWarnings({"EqualsAndHashcode"})
 	public void testInsertWithZeroKeys() throws Exception
 	{
-		m_db.update("drop table if exists @test.people");
-		m_db.update("create table @test.people (name, occupation);");
-		assertEquals(1, m_db.insert("insert into @test.people values (?, ?)", "Sune", "Programmer"));
+		m_db.update("drop table if exists <test>.people");
+		m_db.update("create table <test>.people (name, occupation);");
+		assertEquals(1, m_db.insert("insert into <test>.people values (?, ?)", "Sune", "Programmer"));
 		m_db.query("select 1");
 		DbConnection dbConnection = m_db.getConnection();
 		final Connection c = dbConnection.getConnection();
@@ -122,7 +123,7 @@ public class PooledDbProxyTest extends TestCase
 			}
 		}), false);
 		m_db.close();
-		assertEquals(null, m_db.insert("insert into @test.people values (?, ?)", "Sune", "Programmer"));
+		assertEquals(null, m_db.insert("insert into <test>.people values (?, ?)", "Sune", "Programmer"));
 	}
 
 	public void testFailUpdate() throws Exception
@@ -157,10 +158,10 @@ public class PooledDbProxyTest extends TestCase
 
 	public void testFailRollback() throws Exception
 	{
-		m_db.update("drop table if exists @test.people");
-		m_db.update("create table @test.people (name, occupation);");
+		m_db.update("drop table if exists <test>.people");
+		m_db.update("create table <test>.people (name, occupation);");
 		m_db.beginTransaction();
-		assertEquals(1, m_db.insert("insert into @test.people values (?, ?)", "Sune", "Programmer"));
+		assertEquals(1, m_db.insert("insert into <test>.people values (?, ?)", "Sune", "Programmer"));
 		DbConnection dbConnection = m_db.getConnection();
 		Connection c = dbConnection.getConnection();
 		c.close();
@@ -175,7 +176,8 @@ public class PooledDbProxyTest extends TestCase
 		}
 		assertEquals(false, dbConnection.isInTransaction());
 		assertEquals(false, dbConnection.isOpen());
-		assertEquals(null, m_db.queryOne("select * from @test.people"));
+		assertEquals(false, m_db.query("select * from <test>.people").next());
+		m_db.close();
 	}
 
 	private void createBrokenConnection() throws SQLException

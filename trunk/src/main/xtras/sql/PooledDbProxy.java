@@ -60,7 +60,7 @@ public class PooledDbProxy implements DbProxy
 	public void addSchema(String alias, String schema)
 	{
 		alias = alias.toLowerCase();
-		Pattern pattern = Pattern.compile(Pattern.quote("@" + alias + "."), Pattern.CASE_INSENSITIVE);
+		Pattern pattern = Pattern.compile(Pattern.quote("<" + alias + ">."), Pattern.CASE_INSENSITIVE);
 		synchronized (m_schemaLock)
 		{
 			if (m_alias.contains(alias)) throw new IllegalStateException("Db schema '" +
@@ -142,39 +142,7 @@ public class PooledDbProxy implements DbProxy
 	{
 		return open().query(translate(query), args);
 	}
-
-	public <T> List<T> queryAll(String query, Object... args) throws SQLException
-	{
-		try
-		{
-			ResultSet resultSet = query(query, args);
-			List<T> list = new ArrayList<T>();
-			while (resultSet.next())
-			{
-				list.add((T) SQL.readResultSet(resultSet));
-			}
-			return list;
-		}
-		finally
-		{
-			close();
-		}
-	}
-
-	public <T> T queryOne(String query, Object... args) throws SQLException
-	{
-		try
-		{
-			ResultSet resultSet = query(query, args);
-			if (!resultSet.next()) return null;
-			return (T) SQL.readResultSet(resultSet);
-		}
-		finally
-		{
-			close();
-		}
-	}
-
+	
 	public int update(String update, Object... args) throws SQLException
 	{
 		return open().update(translate(update), args);

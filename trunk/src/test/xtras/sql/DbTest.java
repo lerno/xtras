@@ -17,7 +17,7 @@ public class DbTest extends TestCase
 		Db.unregisterAll();
 		File temp = File.createTempFile("dbtest", "db");
 		temp.deleteOnExit();
-		Db.registerDriver("sqlite", "org.sqlite.JDBC", "jdbc:sqlite:" + temp.getAbsolutePath(), "", "", 2);
+		Db.register("sqlite", "org.sqlite.JDBC", "jdbc:sqlite:" + temp.getAbsolutePath(), "", "", 2);
 		Db.addSchema("test", "main", "sqlite");
 	}
 
@@ -30,10 +30,10 @@ public class DbTest extends TestCase
 	{
 		File temp = File.createTempFile("dbtest", "db");
 		temp.deleteOnExit();
-		Db.registerDriver("sqlite2", "org.sqlite.JDBC", "jdbc:sqlite:" + temp.getAbsolutePath(), "", "", 3);
+		Db.register("sqlite2", "org.sqlite.JDBC", "jdbc:sqlite:" + temp.getAbsolutePath(), "", "", 3);
 		try
 		{
-			Db.registerDriver("sqlite2", "org.sqlite.JDBC", "jdbc:sqlite:" + temp.getAbsolutePath(), "", "", 3);
+			Db.register("sqlite2", "org.sqlite.JDBC", "jdbc:sqlite:" + temp.getAbsolutePath(), "", "", 3);
 			fail();
 		}
 		catch (IllegalStateException e)
@@ -53,23 +53,23 @@ public class DbTest extends TestCase
 
 	public void testQueryAll() throws Exception
 	{
-		Db.update("drop table if exists @test.people");
-		Db.update("create table @test.people (name, occupation);");
-		assertEquals(1, Db.insert("insert into @test.people values (?, ?)", "Sune", "Programmer"));
-		assertEquals(2, Db.insert("insert into @test.people values (?, ?)", "Gurgi", "QA Engineer"));
+		Db.update("drop table if exists <test>.people");
+		Db.update("create table <test>.people (name, occupation);");
+		assertEquals(1, Db.insert("insert into <test>.people values (?, ?)", "Sune", "Programmer"));
+		assertEquals(2, Db.insert("insert into <test>.people values (?, ?)", "Gurgi", "QA Engineer"));
 		assertEquals("[[Sune, Programmer], [Gurgi, QA Engineer]]",
-		             Db.queryAll("select * from @test.people").toString());
+		             Db.queryAll("select * from <test>.people").toString());
 	}
 
 	public void testInsert() throws Exception
 	{
 		try
 		{
-			Db.update("drop table if exists @test.people");
-			Db.update("create table @test.people (name, occupation);");
-			assertEquals(1, Db.insert("insert into @test.people values (?, ?)", "Sune", "Programmer"));
-			assertEquals(2, Db.insert("insert into @test.people values (?, ?)", "Gurgi", "QA Engineer"));
-			ResultSet set = Db.query("select * from @test.people");
+			Db.update("drop table if exists <test>.people");
+			Db.update("create table <test>.people (name, occupation);");
+			assertEquals(1, Db.insert("insert into <test>.people values (?, ?)", "Sune", "Programmer"));
+			assertEquals(2, Db.insert("insert into <test>.people values (?, ?)", "Gurgi", "QA Engineer"));
+			ResultSet set = Db.query("select * from <test>.people");
 			assertEquals(true, set.next());
 			assertEquals("Sune", set.getString(1));
 			assertEquals("Programmer", set.getString(2));
@@ -98,7 +98,7 @@ public class DbTest extends TestCase
 			Db.addSchema("foo", "bar_schema", "Foo");
 			fail();
 		}
-		catch (IllegalStateException e)
+		catch (IllegalArgumentException e)
 		{
 			assertEquals("Key 'Foo' not yet registered.", e.getMessage());
 		}
@@ -106,8 +106,8 @@ public class DbTest extends TestCase
 
 	public void testBeginTransaction() throws Exception
 	{
-		Db.update("drop table if exists @test.people");
-		Db.update("create table @test.people (name, occupation);");
+		Db.update("drop table if exists <test>.people");
+		Db.update("create table <test>.people (name, occupation);");
 		Db.beginTransaction();
 		assertEquals(true, Db.isInTransaction());
 		Db.rollback();
@@ -115,25 +115,25 @@ public class DbTest extends TestCase
 
 	public void testRollback() throws Exception
 	{
-		Db.update("drop table if exists @test.people");
-		Db.update("create table @test.people (name, occupation);");
+		Db.update("drop table if exists <test>.people");
+		Db.update("create table <test>.people (name, occupation);");
 		Db.beginTransaction(TransactionIsolation.SERIALIZABLE);
-		assertEquals(1, Db.insert("insert into @test.people values (?, ?)", "Sune", "Programmer"));
-		assertEquals(2, Db.insert("insert into @test.people values (?, ?)", "Gurgi", "QA Engineer"));
+		assertEquals(1, Db.insert("insert into <test>.people values (?, ?)", "Sune", "Programmer"));
+		assertEquals(2, Db.insert("insert into <test>.people values (?, ?)", "Gurgi", "QA Engineer"));
 		Db.rollback();
-		assertEquals(0, Db.queryOne("select count(*) from @test.people"));
+		assertEquals(0, Db.queryOne("select count(*) from <test>.people"));
 	}
 
 	public void testCommit() throws Exception
 	{
-		Db.update("drop table if exists @test.people");
-		Db.update("create table @test.people (name, occupation);");
+		Db.update("drop table if exists <test>.people");
+		Db.update("create table <test>.people (name, occupation);");
 		Db.beginTransaction();
-		assertEquals(1, Db.insert("insert into @test.people values (?, ?)", "Sune", "Programmer"));
-		assertEquals(2, Db.insert("insert into @test.people values (?, ?)", "Gurgi", "QA Engineer"));
+		assertEquals(1, Db.insert("insert into <test>.people values (?, ?)", "Sune", "Programmer"));
+		assertEquals(2, Db.insert("insert into <test>.people values (?, ?)", "Gurgi", "QA Engineer"));
 		Db.commit();
 		assertEquals(false, Db.isInTransaction());
-		assertEquals(2, Db.queryOne("select count(*) from @test.people"));
+		assertEquals(2, Db.queryOne("select count(*) from <test>.people"));
 	}
 
 	public void testRegisterFake() throws Exception
@@ -184,11 +184,12 @@ public class DbTest extends TestCase
 		{
 			Db.query("some query");
 		}
-		catch (IllegalArgumentException e)
+		catch (IllegalStateException e)
 		{
 			assertEquals("No db found.", e.getMessage());
 		}
 	}
+
 	public void testSelect() throws Exception
 	{
 		try
@@ -199,6 +200,28 @@ public class DbTest extends TestCase
 		catch (IllegalArgumentException e)
 		{
 			assertEquals("Tried to select unknown database 'xyzzy'.", e.getMessage());
+		}
+	}
+
+	public void testUnregisterDb() throws Exception
+	{
+		assertEquals(true, Db.unregisterDb("sqlite"));
+		try
+		{
+			Db.query("some query");
+		}
+		catch (IllegalStateException e)
+		{
+			assertEquals("No db found.", e.getMessage());
+		}
+		assertEquals(false, Db.unregisterDb("sqlite"));
+		try
+		{
+			Db.query("some query");
+		}
+		catch (IllegalStateException e)
+		{
+			assertEquals("No db found.", e.getMessage());
 		}
 	}
 }

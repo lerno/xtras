@@ -12,6 +12,8 @@ public class TupleTest extends TestCase
 	{
 		Tuple a = new Tuple(1, "String");
 		assertEquals(a, new Tuple(1, "String"));
+		assertEquals(false, a.equals(new Tuple(1, "Foo")));
+		assertEquals(false, a.equals(new Tuple(2, "String")));
 		assertEquals(a.hashCode(), new Tuple(1, "String").hashCode());
 		assertEquals(false, a.equals("String"));
 		assertEquals(a.hashCode(), 31 + "String".hashCode());

@@ -8,9 +8,9 @@ import junit.framework.*;
 import java.sql.Statement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.lang.reflect.Proxy;
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.Method;
+import java.sql.Connection;
+
+import xtras.lang.ObjectExtras;
 
 public class SQLTest extends TestCase
 {
@@ -23,56 +23,31 @@ public class SQLTest extends TestCase
 	public void testCloseSilently() throws Exception
 	{
 		SQL.closeSilently((Statement) null);
-		SQL.closeSilently((Statement) Proxy.newProxyInstance(getClass().getClassLoader(),
-		                                                     new Class[]{Statement.class},
-		                                                     new InvocationHandler()
-		                                                     {
-			                                                     public Object invoke(Object proxy,
-			                                                                          Method method,
-			                                                                          Object[] args)
-					                                                     throws Throwable
-			                                                     {
-				                                                     return null;
-			                                                     }
-		                                                     }));
-		SQL.closeSilently((Statement) Proxy.newProxyInstance(getClass().getClassLoader(),
-		                                                     new Class[]{Statement.class},
-		                                                     new InvocationHandler()
-		                                                     {
-			                                                     public Object invoke(Object proxy,
-			                                                                          Method method,
-			                                                                          Object[] args)
-					                                                     throws Throwable
-			                                                     {
-				                                                     throw new SQLException();
-			                                                     }
-		                                                     }));
-
-		SQL.closeSilently((ResultSet) null);
-		SQL.closeSilently((ResultSet) Proxy.newProxyInstance(getClass().getClassLoader(),
-		                                                     new Class[]{ResultSet.class},
-		                                                     new InvocationHandler()
-		                                                     {
-			                                                     public Object invoke(Object proxy,
-			                                                                          Method method,
-			                                                                          Object[] args)
-					                                                     throws Throwable
-			                                                     {
-				                                                     return null;
-			                                                     }
-		                                                     }));
-		SQL.closeSilently((ResultSet) Proxy.newProxyInstance(getClass().getClassLoader(),
-		                                                     new Class[]{ResultSet.class},
-		                                                     new InvocationHandler()
-		                                                     {
-			                                                     public Object invoke(Object proxy,
-			                                                                          Method method,
-			                                                                          Object[] args)
-					                                                     throws Throwable
-			                                                     {
-				                                                     throw new SQLException();
-			                                                     }
-		                                                     }));
+		SQL.closeSilently(ObjectExtras.adapt(Statement.class, new Object()));
+		SQL.closeSilently(ObjectExtras.adapt(Statement.class, new Object()
+		{
+			public void close() throws SQLException
+			{
+				throw new SQLException();
+			}
+		}));
+		SQL.closeSilently(ObjectExtras.adapt(ResultSet.class, new Object()));
+		SQL.closeSilently(ObjectExtras.adapt(ResultSet.class, new Object()
+		{
+			public void close() throws SQLException
+			{
+				throw new SQLException();
+			}
+		}));
+		SQL.closeSilently(ObjectExtras.adapt(Connection.class, new Object()));
+		SQL.closeSilently(ObjectExtras.adapt(Connection.class, new Object()
+		{
+			public void close() throws SQLException
+			{
+				throw new SQLException();
+			}
+		}));
 
 	}
+
 }

@@ -8,6 +8,8 @@ import xtras.lang.StringExtras;
 
 import java.io.ByteArrayOutputStream;
 import java.io.StringWriter;
+import java.io.PrintWriter;
+import java.io.PrintStream;
 
 @SuppressWarnings({"IOResourceOpenedButNotSafelyClosed"})
 public class OutputTest extends TestCase
@@ -70,4 +72,33 @@ public class OutputTest extends TestCase
 		output2.println("Testing output");
 		assertEquals("Testing output" + NEWLINE, w.toString());
 	}
+
+	public void testIllegalTableAccess()
+	{
+		ByteArrayOutputStream array = new ByteArrayOutputStream();
+		PrintWriter writer = new PrintWriter(array);
+		Output out = new Output(writer);
+		try
+		{
+			out.addRow(1);
+			fail();
+		}
+		catch (IllegalStateException e)
+		{
+			assertEquals("Attempted to edit table before it was created.", e.getMessage());
+		}
+		out.println("Testing output");
+		writer.flush();
+		assertEquals("Testing output" + NEWLINE, array.toString());
+	}
+	public void testPrintStream()
+	{
+		ByteArrayOutputStream array = new ByteArrayOutputStream();
+		PrintStream stream = new PrintStream(array);
+		Output out = new Output(stream);
+		out.println("Testing output");
+		stream.flush();
+		assertEquals("Testing output" + NEWLINE, array.toString());
+	}
+
 }

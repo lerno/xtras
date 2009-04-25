@@ -31,12 +31,6 @@ public class FakeDbTest extends TestCase
 		assertEquals(1, m_fakeDb.update("update test set x = 1"));
 	}
 
-	public void testQueryAll() throws Exception
-	{
-		m_fakeDb.addQuery("select * from any", Arrays.asList(new Object[]{1, 2}, new Object[]{3, 4}));
-		assertEquals("[[1, 2], [3, 4]]", m_fakeDb.queryAll("select * from any").toString());
-	}
-
 	public void testAddQuery() throws Exception
 	{
 		m_fakeDb.addQuery("select * from any where y = ?", new FakeResultGenerator()

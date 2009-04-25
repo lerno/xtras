@@ -80,24 +80,6 @@ public class FakeDb implements DbProxy
 		return ObjectExtras.adapt(ResultSet.class, getResult(query, args));
 	}
 
-	public <T> List<T> queryAll(String query, Object... args) throws SQLException
-	{
-		ArrayList<T> resultList = new ArrayList<T>();
-		FakeResultSet result = getResult(query, args);
-		while (result.next())
-		{
-			resultList.add((T) result.getValues());
-		}
-		return resultList;
-	}
-
-	public <T> T queryOne(String query, Object... args) throws SQLException
-	{
-		FakeResultSet result = getResult(query, args);
-		result.next();
-		return (T) result.getValues();
-	}
-
 	public void rollback() throws SQLException {}
 
 	public void shutdown()
@@ -112,8 +94,8 @@ public class FakeDb implements DbProxy
 
 	public int update(String update, Object... args) throws SQLException
 	{
-		Integer value = queryOne(update, args);
-		return value == null ? 0 : value;
+		ResultSet set = query(update, args);
+		return set.next() ? (Integer) set.getObject(1) : 0;
 	}
 
 	private static class FakeResultSet
@@ -130,7 +112,19 @@ public class FakeDb implements DbProxy
 			m_arguments = arguments;
 			m_generator = generator;
 		}
-		
+
+		public ResultSetMetaData getMetaData() throws SQLException
+		{
+			return ObjectExtras.adapt(ResultSetMetaData.class,
+			                          new Object()
+			{
+				public int getColumnCount() throws SQLException
+				{
+					return m_values == null ? 0 : m_values.length;
+				}
+			});
+		}
+
 		public Object getObject(int columnIndex) throws SQLException
 		{
 			return m_values[columnIndex - 1];

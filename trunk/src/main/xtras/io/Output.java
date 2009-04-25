@@ -104,7 +104,7 @@ class Output
 	 */
 	private void assertTable()
 	{
-		if (m_table == null) throw new IllegalStateException("Trying to edit table before creating it.");
+		if (m_table == null) throw new IllegalStateException("Attempted to edit table before it was created.");
 	}
 
 	/**

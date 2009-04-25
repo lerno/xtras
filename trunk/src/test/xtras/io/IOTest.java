@@ -7,6 +7,9 @@ import junit.framework.*;
 
 import java.net.*;
 import java.io.*;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.Enumeration;
 
 import xtras.lang.StringExtras;
 
@@ -16,6 +19,12 @@ public class IOTest extends TestCase
 	public void testEmptyTest()
 	{
 		new IO();
+	}
+
+	@Override
+	protected void tearDown() throws Exception
+	{
+		IO.setNetworkInterfaceProvider(null);
 	}
 
 	@SuppressWarnings({"SocketOpenedButNotSafelyClosed"})
@@ -129,12 +138,73 @@ public class IOTest extends TestCase
 		assertTrue(IO.isHostReachable("127.0.0.1", 9998));
 	}
 
+	public void testGetBestIpGuessLocalhost() throws Exception
+	{
+
+		Map<String, InetAddress> interfaces = new HashMap<String, InetAddress>();
+		interfaces.put("1", InetAddress.getByName("127.0.1.1"));
+		assertEquals(InetAddress.getLocalHost(), IO.getBestIpGuess(interfaces));
+		InetAddress linkLocal1 = InetAddress.getByName("169.254.1.1");
+		InetAddress linkLocal2 = InetAddress.getByName("169.254.1.2");
+		interfaces.put("eee0", linkLocal1);
+		interfaces.put("ddd0", linkLocal2);
+
+		// Selects in alphabetical order of interface names, so expect ddd0, i.e. linkLocal2
+		assertEquals(linkLocal2, IO.getBestIpGuess(interfaces));
+
+		InetAddress siteLocal1 = InetAddress.getByName("10.7.1.2");
+		interfaces.put("d1", siteLocal1);
+
+		// Will prefer site local, so expect d1, i.e. siteLocal1
+		assertEquals(siteLocal1, IO.getBestIpGuess(interfaces));
+
+		InetAddress siteLocal2 = InetAddress.getByName("10.7.45.2");
+		InetAddress siteLocal3 = InetAddress.getByName("10.8.12.2");
+		interfaces.put("e1", siteLocal2);
+		interfaces.put("e3", siteLocal3);
+
+		// Having a choice between interfaces starting with e, and starting with some other
+		// letter, choose the first in string order that starts with e.
+		assertEquals(siteLocal2, IO.getBestIpGuess(interfaces));
+
+		InetAddress regular1 = InetAddress.getByName("218.1.1.1");
+		interfaces.put("az", regular1);
+		// Giving a non-site local will have preference over other ips.
+		assertEquals(regular1, IO.getBestIpGuess(interfaces));
+
+		InetAddress regular2 = InetAddress.getByName("231.21.21.1");
+		interfaces.put("eth1000", regular2);
+		// Again, e-prefix will have precedence.
+		assertEquals(regular2, IO.getBestIpGuess(interfaces));
+
+	}
+
+	public void testGetIp() throws Exception
+	{
+		IO.getIP();
+		IO.setNetworkInterfaceProvider(new NetworkInterfaceProvider()
+		{
+			public Enumeration<NetworkInterface> getNetworkInterfaces() throws SocketException
+			{
+				return null;
+			}
+		});
+		assertEquals(IO.getIP(), InetAddress.getLocalHost().getHostAddress());
+		IO.setNetworkInterfaceProvider(new NetworkInterfaceProvider()
+		{
+			public Enumeration<NetworkInterface> getNetworkInterfaces() throws SocketException
+			{
+				throw new SocketException();
+			}
+		});
+		assertEquals(IO.getIP(), "127.0.0.1");
+	}
+
 	/** @author Christoffer Lerno */
 	@SuppressWarnings({"IOResourceOpenedButNotSafelyClosed"})
 	public static class TableModelTest extends TestCase
 	{
 		private final static String NEWLINE = StringExtras.LINE_SEPARATOR;
-
 
 		public void testPrinting()
 		{

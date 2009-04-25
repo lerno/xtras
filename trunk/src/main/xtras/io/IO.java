@@ -9,6 +9,9 @@ import java.util.*;
 /** @author Christoffer Lerno */
 public class IO
 {
+
+	private static NetworkInterfaceProvider s_provider = new DefaultNetworkInterfaceProvider();
+
 	/**
 	 * Silently close a closeable object (e.g. a stream).
 	 *
@@ -191,6 +194,133 @@ public class IO
 		finally
 		{
 			IO.closeSilently(testSocket);
+		}
+	}
+
+
+	public static List<NetworkInterface> getNetworkInterfaces() throws SocketException
+	{
+		Enumeration<NetworkInterface> e = s_provider.getNetworkInterfaces();
+		return e == null ? Collections.<NetworkInterface>emptyList() : Collections.list(e);
+	}
+
+	private static Map<String, InetAddress> collectAllIp(boolean preferIPv6) throws SocketException
+	{
+		Map<String, InetAddress> map = new HashMap<String, InetAddress>();
+		for (NetworkInterface networkInterface : getNetworkInterfaces())
+		{
+			Enumeration<InetAddress> addresses = networkInterface.getInetAddresses();
+			while (addresses.hasMoreElements())
+			{
+				InetAddress address = addresses.nextElement();
+				if ((address instanceof Inet4Address && !preferIPv6)
+				    || (address instanceof Inet6Address && preferIPv6)
+				    || !map.containsKey(networkInterface.getDisplayName()))
+				{
+					map.put(networkInterface.getDisplayName(), address);
+				}
+			}
+		}
+		return map;
+	}
+
+	private static boolean isLocalAddress(InetAddress address)
+	{
+		return address.isAnyLocalAddress() || address.isLoopbackAddress()
+		       || address.isLinkLocalAddress() || address.isSiteLocalAddress();
+	}
+
+	private static boolean isPreferredInterface(String interfaceName)
+	{
+		return interfaceName.startsWith("e");
+	}
+
+	private static InetAddress getBestNonLocalAddress(Map<String, InetAddress> addresses)
+	{
+		List<InetAddress> candidates = new ArrayList<InetAddress>();
+		for (String interfaceName : new TreeSet<String>(addresses.keySet()))
+		{
+			InetAddress address = addresses.get(interfaceName);
+			if (isLocalAddress(address)) continue;
+			if (isPreferredInterface(interfaceName))
+			{
+				return address;
+			}
+			candidates.add(address);
+		}
+		return candidates.size() > 0 ? candidates.get(0) : null;
+	}
+
+	private static InetAddress getBestSiteLocalAddress(Map<String, InetAddress> addresses)
+	{
+		List<InetAddress> candidates = new ArrayList<InetAddress>();
+		for (String interfaceName : new TreeSet<String>(addresses.keySet()))
+		{
+			InetAddress address = addresses.get(interfaceName);
+			if (!address.isSiteLocalAddress()) continue;
+			if (isPreferredInterface(interfaceName))
+			{
+				return address;
+			}
+			candidates.add(address);
+		}
+		return candidates.size() > 0 ? candidates.get(0) : null;
+	}
+
+	private static InetAddress getFirstLinkLocalAddress(Map<String, InetAddress> addresses)
+	{
+		for (String interfaceName : new TreeSet<String>(addresses.keySet()))
+		{
+			InetAddress address = addresses.get(interfaceName);
+			if (address.isLinkLocalAddress())
+			{
+				return address;
+			}
+		}
+		return null;
+	}
+
+	protected static InetAddress getBestIpGuess(Map<String, InetAddress> addresses) throws UnknownHostException
+	{
+		InetAddress bestNonLocal = getBestNonLocalAddress(addresses);
+		if (bestNonLocal != null) return bestNonLocal;
+		InetAddress bestSiteLocal = getBestSiteLocalAddress(addresses);
+		if (bestSiteLocal != null) return bestSiteLocal;
+		InetAddress firstLinkLocal = getFirstLinkLocalAddress(addresses);
+		return firstLinkLocal == null ? InetAddress.getLocalHost() : firstLinkLocal;
+	}
+	/**
+	 * Returns the ip of first en* interface for this machine, if not available,
+	 * InetAddress.getLocalHost() will be used.
+	 * <p>
+	 * If any exceptions are thrown then method will default
+	 * to 127.0.0.1.
+	 *
+	 * @return The ip or 127.0.0.1 if we fail to extract the ip.
+	 */
+	public static String getIP()
+	{
+		try
+		{
+			return getBestIpGuess(collectAllIp(false)).getHostAddress();
+		}
+		catch (IOException e)
+		{
+			return "127.0.0.1";
+		}
+
+	}
+
+	static void setNetworkInterfaceProvider(NetworkInterfaceProvider provider)
+	{
+		s_provider = provider == null ? new DefaultNetworkInterfaceProvider() : provider;
+	}
+
+	private static class DefaultNetworkInterfaceProvider implements NetworkInterfaceProvider
+	{
+		public Enumeration<NetworkInterface> getNetworkInterfaces() throws SocketException
+		{
+			return NetworkInterface.getNetworkInterfaces();
 		}
 	}
 

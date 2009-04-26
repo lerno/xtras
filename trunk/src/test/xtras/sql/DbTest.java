@@ -9,6 +9,7 @@ import xtras.util.CollectionExtras;
 
 import java.sql.*;
 import java.io.File;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class DbTest extends TestCase
 {
@@ -42,14 +43,6 @@ public class DbTest extends TestCase
 		}
 	}
 
-	public void testQuery() throws Exception
-	{
-		ResultSet set = Db.query("select 1");
-		assertEquals(true, set.next());
-		assertEquals(1, set.getInt(1));
-		assertEquals(false, set.next());
-		Db.close();
-	}
 
 	public void testQueryAll() throws Exception
 	{
@@ -61,24 +54,58 @@ public class DbTest extends TestCase
 		             Db.queryAll("select * from <test>.people").toString());
 	}
 
+	public void testQueryOne() throws Exception
+	{
+		Db.update("drop table if exists <test>.people");
+		Db.update("create table <test>.people (name, occupation);");
+		assertEquals(1, Db.insert("insert into <test>.people values (?, ?)", "Sune", "Programmer"));
+		assertEquals(2, Db.insert("insert into <test>.people values (?, ?)", "Gurgi", "QA Engineer"));
+		assertEquals("[Sune, Programmer]",
+		             Db.<Object>queryOne("select * from <test>.people").toString());
+	}
+
+	public void testQuery() throws Exception
+	{
+		Db.update("drop table if exists <test>.people");
+		Db.update("create table <test>.people (name, occupation);");
+		assertEquals(1, Db.insert("insert into <test>.people values (?, ?)", "Sune", "Programmer"));
+		assertEquals(2, Db.insert("insert into <test>.people values (?, ?)", "Gurgi", "QA Engineer"));
+		Integer value = Db.query(new ResultProcessor<Integer>()
+		{
+			public Integer getResult()
+			{
+				return 42;
+			}
+
+			public boolean process(ResultSet result) throws SQLException
+			{
+				switch (result.getRow())
+				{
+					case 2:
+						assertEquals("Sune", result.getString(1));
+						assertEquals("Programmer", result.getString(2));
+						break;
+					case 3:
+						assertEquals("Gurgi", result.getString(1));
+						assertEquals("QA Engineer", result.getString(2));
+						break;
+					default:
+						fail();
+				}
+				return true;
+			}
+		}, "select * from <test>.people");
+		assertEquals(42, value.intValue());
+	}
+
 	public void testInsert() throws Exception
 	{
-		try
-		{
-			Db.update("drop table if exists <test>.people");
-			Db.update("create table <test>.people (name, occupation);");
-			assertEquals(1, Db.insert("insert into <test>.people values (?, ?)", "Sune", "Programmer"));
-			assertEquals(2, Db.insert("insert into <test>.people values (?, ?)", "Gurgi", "QA Engineer"));
-			ResultSet set = Db.query("select * from <test>.people");
-			assertEquals(true, set.next());
-			assertEquals("Sune", set.getString(1));
-			assertEquals("Programmer", set.getString(2));
-			assertEquals(true, set.next());
-		}
-		finally
-		{
-			Db.close();
-		}
+		Db.update("drop table if exists <test>.people");
+		Db.update("create table <test>.people (name, occupation);");
+		assertEquals(1, Db.insert("insert into <test>.people values (?, ?)", "Sune", "Programmer"));
+		assertEquals(2, Db.insert("insert into <test>.people values (?, ?)", "Gurgi", "QA Engineer"));
+		assertEquals("[[Sune, Programmer], [Gurgi, QA Engineer]]",
+		             Db.queryAll("select * from <test>.people").toString());
 	}
 
 	public void testRegisterSchema() throws Exception
@@ -159,16 +186,25 @@ public class DbTest extends TestCase
 			assertEquals("[" + 2 * index + ", " + 5 * index + "]", values.toString());
 			index++;
 		}
-		int entries = 0;
-		ResultSet result = Db.query("select some stuff", 2, 5);
-		while (result.next())
+		final AtomicInteger i = new AtomicInteger(0);
+
+		Integer value = Db.query(new ResultProcessor<Integer>()
 		{
-			assertEquals(2 * entries, result.getObject(1));
-			assertEquals(5 * entries, result.getObject(2));
-			assertEquals(entries + 1, result.getRow());
-			entries++;
-		}
-		assertEquals(4, entries);
+			public Integer getResult()
+			{
+				return 42;
+			}
+
+			public boolean process(ResultSet result) throws SQLException
+			{
+				assertEquals(2 * i.get(), result.getObject(1));
+				assertEquals(5 * i.get(), result.getObject(2));
+				assertEquals(i.incrementAndGet() + 1, result.getRow());
+				return true;
+			}
+		}, "select some stuff", 2, 5);
+		assertEquals((Integer) 42, value);
+		assertEquals(4, i.get());
 	}
 
 	@SuppressWarnings({"InstantiationOfUtilityClass"})
@@ -182,7 +218,8 @@ public class DbTest extends TestCase
 		Db.unregisterAll();
 		try
 		{
-			Db.query("some query");
+			Db.queryOne("some query");
+			fail();
 		}
 		catch (IllegalStateException e)
 		{
@@ -208,7 +245,8 @@ public class DbTest extends TestCase
 		assertEquals(true, Db.unregisterDb("sqlite"));
 		try
 		{
-			Db.query("some query");
+			Db.queryOne("some query");
+			fail();
 		}
 		catch (IllegalStateException e)
 		{
@@ -217,7 +255,8 @@ public class DbTest extends TestCase
 		assertEquals(false, Db.unregisterDb("sqlite"));
 		try
 		{
-			Db.query("some query");
+			Db.queryOne("some query");
+			fail();
 		}
 		catch (IllegalStateException e)
 		{

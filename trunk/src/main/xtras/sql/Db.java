@@ -8,7 +8,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.ArrayList;
 import java.sql.SQLException;
-import java.sql.ResultSet;
 
 /**
  * This class provides the means to make simple interactions with one or several databases.
@@ -50,29 +49,16 @@ import java.sql.ResultSet;
  * {@literal List<String> userNames = Db.queryAll("select user from users"); }
  * </pre>
  * <p/>
- * We can also work with the result set itself, but then we need to make an explicit close:
- * <pre>
- * try
- * {
- *     ResultSet resultSet = Db.query("select * from users");
- *
- *     ... do work on result set ...
- *
- * }
- * finally
- * {
- *     // Close the result set.
- *     Db.close();
- * }
- * </pre>
+ * We can also work with the result set itself, by writing a ResultProcessor.
+ * <code>
+ * TheResultClass theResult = Db.query(new MyNewResultProcessor(), "select * from users");
+ * </code>
  * <p/>
- * If we start a transaction, we also need to explicitly do a commit or rollback.
- * Note that close() only closes the statment and result set if in a transaction:
+ * If we start a transaction, we need to explicitly commit or rollback.
  * <pre>
  * Db.beginTransaction();
  * try
  * {
- *
  *     ... make updates, inserts and queries.
  *
  *     // Everything ok, let's commit!
@@ -82,11 +68,6 @@ import java.sql.ResultSet;
  * {
  *     // Something failed, do a rollback.
  *     Db.rollback();
- * }
- * finally
- * {
- *     // Always end with a close to clean up statements etc.
- *     Db.close();
  * }
  * </pre>
  *
@@ -101,7 +82,6 @@ public final class Db
 	private final static Map<String, DbProxy> s_dbs = new HashMap<String, DbProxy>();
 	private final static ThreadLocal<DbProxy> s_activeDb = new ThreadLocal<DbProxy>();
 	private static DbProxy s_defaultDb = null;
-	private static boolean s_debugFlag = true;
 
 	/**
 	 * Creates and registers a new DbProxy with the given key.
@@ -184,7 +164,7 @@ public final class Db
 	{
 		DbProxy db = getDb(key);
 		if (db == null) throw new IllegalArgumentException("Key '" + key + "' not yet registered.");
-		db.addSchema(alias, schema);
+		db.addAlias(alias, schema);
 	}
 
 	/**
@@ -297,6 +277,9 @@ public final class Db
 		getSelectedDb().commit();
 	}
 
+	/**
+	 * Unregisters and calls DbProxy#shutdown on all registered proxies.
+	 */
 	public static void unregisterAll()
 	{
 		ArrayList<DbProxy> dbs;
@@ -312,57 +295,6 @@ public final class Db
 		}
 	}
 
-	/**
-	 * This closes the currently opened statement and result set.
-	 * <p>
-	 * Unless we are in a transaction, calling close will also release the
-	 * current connection.
-	 * <p>
-	 * Note that it is safe call {@code close()} even if there is no
-	 * connection or result set opened.
-	 */
-	public static void close()
-	{
-		getSelectedDb().close();
-	}
-
-	/**
-	 * Performs a db query and returns the result as a {@code ResultSet}.
-	 * <p>
-	 * After using the data, always call Db#close() to properly dispose of the
-	 * result set.
-	 * <p>
-	 * Failing to properly dispose of the result set will cause an exception next time
-	 * a db call is made on the same thread.
-	 * <p/>
-	 * Typical use is therefore:
-	 * <pre>
-	 * try
-	 * {
-	 *    ResultSet rs = Db.query("select * from sometable where key = ?", theKey);
-	 *    while (rs.next())
-	 *    {
-	 *        ... do things with result ...
-	 *    }
-	 * }
-	 * finally
-	 * {
-	 *    Db.close();
-	 * }
-	 * </pre>
-	 * <p/>
-	 * Note that if the query fails, an implicit call to Db#close() will be made
-	 * to ensure that all resources are properly disposed of.
-	 *
-	 * @param query the query to use, with '?' to represent arguments.
-	 * @param args a list of arguments, should always be same number as the '?' in the query.
-	 * @return a result set for the query.
-	 * @throws SQLException if there was an error performing the query.
-	 */
-	public static ResultSet query(String query, Object... args) throws SQLException
-	{
-		return getSelectedDb().query(query, args);
-	}
 
 	/**
 	 * Returns the first resulting row of the given query and closes the result set.
@@ -395,16 +327,7 @@ public final class Db
 	@SuppressWarnings({"RedundantTypeArguments"})
 	public static <T> T queryOne(String query, Object... args) throws SQLException
 	{
-		try
-		{
-			ResultSet resultSet = query(query, args);
-			if (!resultSet.next()) return null;
-			return (T) SQL.readResultSet(resultSet);
-		}
-		finally
-		{
-			close();
-		}
+		return (T) getSelectedDb().queryOne(query, args);
 	}
 
 	/**
@@ -439,23 +362,38 @@ public final class Db
 	 */
 	public static <T> List<T> queryAll(String query, Object... args) throws SQLException
 	{
-		try
-		{
-			ResultSet resultSet = query(query, args);
-			List<T> list = new ArrayList<T>();
-			while (resultSet.next())
-			{
-				list.add((T) SQL.readResultSet(resultSet));
-			}
-			return list;
-		}
-		finally
-		{
-			close();
-		}
+		return (List<T>) getSelectedDb().queryAll(query, args);
 	}
 
+	/**
+	 * Performs a db query and allows a ResultProcessor work on each row in the
+	 * result set. The method then returns the object returned by ResultProcessor#getResult.
+	 *
+	 * @param processor the result processor to use.
+	 * @param query the query to use, with '?' to represent arguments.
+	 * @param args a list of arguments, should always be same number as the '?' in the query.
+	 * @return the result from the ResultProcessor's {@code getResult} method
+	 * @throws SQLException if there was an error performing the query.
+	 * @see xtras.sql.ResultProcessor#getResult()
+	 */
+	public static <T> T query(ResultProcessor<T> processor, String query, Object... args) throws SQLException
+	{
+		return getSelectedDb().query(processor, query, args);
+	}
 
+	/**
+	 * Performs an insert and returns a single key or a list, containing the key(s)
+	 * generated by the insert.
+	 * <p/>
+	 * This will automatically close the current statement and result set. The current
+	 * connection will remain available only if in a transaction, otherwise the
+	 * connection will be released.
+	 *
+	 * @param insert the insert to run.
+	 * @param args the arguments to the insert.
+	 * @return the key generated if a single key, a list (List) of keys if the number of keys is != 1.
+	 * @throws SQLException if the insert fails for some reason.
+	 */
 	@SuppressWarnings({"RedundantTypeArguments"})
 	public static <T> T insert(String insert, Object... args) throws SQLException
 	{
@@ -475,22 +413,29 @@ public final class Db
 		return getSelectedDb().update(update, args);
 	}
 
-	public static void select(String database)
+	/**
+	 * Select the database to use for consequent queries on this thread.
+	 * <p>
+	 * This will implicitly cause a close on the old proxy previously used.
+	 *
+	 * @param key the key of the db to use.
+	 * @throws IllegalArgumentException if there is no db with the key.
+	 */
+	public static void select(String key)
 	{
-		DbProxy db = getDb(database);
-		if (db == null) throw new IllegalArgumentException("Tried to select unknown database '" + database + "'.");
-		db.close();
+		DbProxy db = getDb(key);
+		if (db == null) throw new IllegalArgumentException("Tried to select unknown database '" + key + "'.");
+		//db.close();
 		s_activeDb.set(db);
 	}
 
+	/**
+	 * Test if the db is currently in a transaction.
+	 *
+	 * @return true if in a transaction, false otherwise.
+	 */
 	public static boolean isInTransaction()
 	{
 		return getSelectedDb().isInTransaction();
 	}
-
-	public static boolean getDebugFlag()
-	{
-		return s_debugFlag;
-	}
-
 }

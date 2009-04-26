@@ -4,12 +4,10 @@ package xtras.sql;
  */
 
 import junit.framework.*;
-import xtras.lang.ObjectExtras;
 
 import java.io.File;
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class DbConnectionTest extends TestCase
 {
@@ -32,77 +30,16 @@ public class DbConnectionTest extends TestCase
 		{
 			m_dbConnection.rollback();
 		}
-		else
-		{
-			m_dbConnection.close();
-		}
-	}
-
-	@SuppressWarnings({"EqualsAndHashcode"})
-	public void testFailToTestConnection() throws Exception
-	{
-		Connection c = m_pool.acquire();
-		final AtomicInteger i = new AtomicInteger(0);
-		m_pool.release(ObjectExtras.override(c, new Object()
-		{
-			@SuppressWarnings({"EqualsWhichDoesntCheckParameterClass"})
-			@Override
-			public boolean equals(Object obj)
-			{
-				return true;
-			}
-			public boolean isClosed() throws SQLException
-			{
-				if (i.getAndIncrement() > 0)
-				{
-					throw new SQLException();
-				}
-				else
-				{
-					return false;
-				}
-			}
-		}), false);
-		assertEquals(0, m_pool.getConnectionsBusy());
-		assertEquals(1, m_pool.getConnectionsFree());
-		m_dbConnection.open(m_pool);
-		assertEquals(1, m_pool.getConnectionsBusy());
-		assertEquals(0, m_pool.getConnectionsFree());
-		m_dbConnection.startTransaction(null);
-		m_dbConnection.close();
-		assertEquals(0, m_pool.getConnectionsBusy());
-		assertEquals(0, m_pool.getConnectionsFree());
-
-	}
-
-	public void testErrorsRemovedAfterClose() throws SQLException
-	{
-		m_dbConnection.open(m_pool);
-		try
-		{
-			m_dbConnection.query("Illegal query");
-			fail();
-		}
-		catch (SQLException e)
-		{}
-		finally
-		{
-			m_dbConnection.close();
-		}
-		assertEquals(false, m_dbConnection.hasErrors());
 	}
 
 	public void testQueryErrors() throws Exception
 	{
 		assertEquals(false, m_dbConnection.hasErrors());
-		m_dbConnection.open(m_pool);
-		m_dbConnection.query("select 1");
-		m_dbConnection.close();
+		m_dbConnection.queryOne(m_pool, "select 1");
 		assertEquals(false, m_dbConnection.hasErrors());
-		m_dbConnection.open(m_pool);
 		try
 		{
-			m_dbConnection.query("Illegal query");
+			m_dbConnection.queryOne(m_pool, "Illegal query");
 			fail();
 		}
 		catch (SQLException e)
@@ -110,88 +47,81 @@ public class DbConnectionTest extends TestCase
 		assertEquals(true, m_dbConnection.hasErrors());
 	}
 
-
 	public void testUpdateErrors() throws Exception
 	{
 		assertEquals(false, m_dbConnection.hasErrors());
-		m_dbConnection.open(m_pool);
-		m_dbConnection.update("drop table if exists people");
+		m_dbConnection.update(m_pool, "drop table if exists people");
 		assertEquals(false, m_dbConnection.hasErrors());
-		m_dbConnection.open(m_pool);
 		try
 		{
-			m_dbConnection.update("Illegal update");
+			m_dbConnection.update(m_pool, "Illegal update");
 			fail();
 		}
 		catch (SQLException e)
 		{
 		}
-		assertEquals(false, m_dbConnection.hasErrors());
+		assertEquals(true, m_dbConnection.hasErrors());
 	}
+
 	public void testChangingPoolsDuringTransaction() throws Exception
 	{
-		m_dbConnection.open(m_pool);
-		m_dbConnection.startTransaction(null);
-		m_dbConnection.open(m_pool); // This is ok!
+		m_dbConnection.beginTransaction(m_pool, null);
+		m_dbConnection.queryOne(m_pool, "select 1");
 		try
 		{
-			m_dbConnection.open(new DbPool("x", "y", "z", 0));
+			m_dbConnection.queryOne(new DbPool("x", "y", "z", 0), "select 1");
 			fail();
 		}
 		catch (SQLException e)
 		{
-			assertEquals("Changed pool during transaction.", e.getMessage());
+			assertEquals("Tried to mix multiple connections in single transaction.", e.getMessage());
 		}
 		assertEquals(false, m_dbConnection.isInTransaction());
-		assertEquals(false, m_dbConnection.isOpen());
 		assertEquals(false, m_dbConnection.hasErrors());
+	}
+
+	public void testChangingPoolsDuringTransactionWithRollbackException() throws Exception
+	{
+		Connection c = m_pool.acquire();
+		m_pool.release(c, false);
+		m_dbConnection.beginTransaction(m_pool, null);
+		m_dbConnection.queryOne(m_pool, "select 1");
+		try
+		{
+			c.close();
+			m_dbConnection.queryOne(new DbPool("x", "y", "z", 0), "select 1");
+			fail();
+		}
+		catch (SQLException e)
+		{
+			assertEquals("Tried to mix multiple connections in single transaction.", e.getMessage());
+		}
+		assertEquals(false, m_dbConnection.isInTransaction());
+		assertEquals(true, m_dbConnection.hasErrors());
 	}
 
 	public void testInsertErrors() throws Exception
 	{
-		m_dbConnection.open(m_pool);
-		m_dbConnection.startTransaction(TransactionIsolation.SERIALIZABLE);
-		m_dbConnection.update("drop table if exists people");
-		m_dbConnection.update("create table people (name, occupation);");
+		m_dbConnection.beginTransaction(m_pool, TransactionIsolation.SERIALIZABLE);
+		m_dbConnection.update(m_pool, "drop table if exists people");
+		m_dbConnection.update(m_pool, "create table people (name, occupation);");
 		m_dbConnection.commit();
-		m_dbConnection.open(m_pool);
-		m_dbConnection.insert("insert into people values (?, ?)", "Sune", "Programmer");
-		assertEquals(false, m_dbConnection.isOpen());
-		assertEquals(false, m_dbConnection.hasErrors());
-		m_dbConnection.open(m_pool);
-		try
-		{
-			m_dbConnection.insert("Illegal query");
-			fail();
-		}
-		catch (SQLException e)
-		{
-		}
-		assertEquals(false, m_dbConnection.isOpen());
-		assertEquals(false, m_dbConnection.hasErrors());
-	}
-
-	public void testDoubleOpen() throws Exception
-	{
-		m_dbConnection.open(m_pool);
-		assertEquals(true, m_dbConnection.isOpen());
+		m_dbConnection.insert(m_pool, "insert into people values (?, ?)", "Sune", "Programmer");
 		assertEquals(false, m_dbConnection.isInTransaction());
+		assertEquals(false, m_dbConnection.hasErrors());
 		try
 		{
-			m_dbConnection.open(m_pool);
+			m_dbConnection.insert(m_pool, "Illegal query");
 			fail();
 		}
 		catch (SQLException e)
 		{
-			assertEquals("Connection not properly closed.", e.getMessage());
 		}
-		assertEquals(false, m_dbConnection.isOpen());
+		assertEquals(true, m_dbConnection.hasErrors());
 	}
 
 	public void testErronouslyCommit() throws Exception
 	{
-		m_dbConnection.open(m_pool);
-		assertEquals(true, m_dbConnection.isOpen());
 		assertEquals(false, m_dbConnection.isInTransaction());
 		try
 		{
@@ -202,13 +132,10 @@ public class DbConnectionTest extends TestCase
 		{
 			assertEquals("Tried to commit transaction outside of transaction.", e.getMessage());
 		}
-		assertEquals(false, m_dbConnection.isOpen());
 	}
 
 	public void testErronouslyRollback() throws Exception
 	{
-		m_dbConnection.open(m_pool);
-		assertEquals(true, m_dbConnection.isOpen());
 		assertEquals(false, m_dbConnection.isInTransaction());
 		try
 		{
@@ -219,53 +146,60 @@ public class DbConnectionTest extends TestCase
 		{
 			assertEquals("Tried to rollback outside of transaction.", e.getMessage());
 		}
-		assertEquals(false, m_dbConnection.isOpen());
 	}
 
 	public void testDoubleStartTransaction() throws Exception
 	{
-		m_dbConnection.open(m_pool);
-		m_dbConnection.startTransaction(null);
-		assertEquals(true, m_dbConnection.isOpen());
+		m_dbConnection.beginTransaction(m_pool, null);
 		assertEquals(true, m_dbConnection.isInTransaction());
 		try
 		{
-			m_dbConnection.startTransaction(null);
+			m_dbConnection.beginTransaction(m_pool, null);
 			fail();
 		}
 		catch (SQLException e)
 		{
 			assertEquals("Tried to start transaction while already in transaction.", e.getMessage());
 		}
-		assertEquals(true, m_dbConnection.isOpen());
+		assertEquals(false, m_dbConnection.isInTransaction());
+		assertEquals(false, m_dbConnection.hasErrors());
 	}
 
-	public void testOpenStatementWithoutConnection() throws Exception
+	public void testDoubleStartTransactionWithRollbackException() throws Exception
 	{
+		Connection c = m_pool.acquire();
+		m_pool.release(c, false);
+		m_dbConnection.beginTransaction(m_pool, null);
+		assertEquals(true, m_dbConnection.isInTransaction());
+		c.close();
 		try
 		{
-			m_dbConnection.openStatement("query");
+			m_dbConnection.beginTransaction(m_pool, null);
 			fail();
 		}
 		catch (SQLException e)
 		{
-			assertEquals("Tried to open statement without opening a connection.", e.getMessage());
+			assertEquals("Tried to start transaction while already in transaction.", e.getMessage());
 		}
+		assertEquals(false, m_dbConnection.isInTransaction());
+		assertEquals(true, m_dbConnection.hasErrors());
 	}
 
-	public void testOpenTwoStatements() throws Exception
+	public void testBeginTransactionFailed() throws Exception
 	{
-		m_dbConnection.open(m_pool);
-		m_dbConnection.openStatement("select 1");
+		Connection c = m_pool.acquire();
+		m_pool.release(c, false);
+		c.close();
 		try
 		{
-			m_dbConnection.openStatement("select 1");
+			m_dbConnection.beginTransaction(m_pool, null);
 			fail();
 		}
 		catch (SQLException e)
 		{
-			assertEquals("Tried to open statement with another statement open.", e.getMessage());
+			assertEquals("database connection closed", e.getMessage());
 		}
+		assertEquals(false, m_dbConnection.isInTransaction());
+		assertEquals(true, m_dbConnection.hasErrors());
 	}
-
 }

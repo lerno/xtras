@@ -7,6 +7,7 @@ import junit.framework.*;
 
 import java.util.List;
 import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.sql.SQLException;
 import java.sql.ResultSet;
 
@@ -40,15 +41,20 @@ public class FakeDbTest extends TestCase
 				return new Object[]{(Integer) arguments[0] * row};
 			}
 		});
-		ResultSet set = m_fakeDb.query("select * from any where y = ?", 3);
-		assertEquals(true, set.next());
-		assertEquals(0, set.getObject(1));
-		assertEquals(true, set.next());
-		assertEquals(3, set.getObject(1));
-		assertEquals(true, set.next());
-		assertEquals(6, set.getObject(1));
-		assertEquals(true, set.next());
-		assertEquals(9, set.getObject(1));
+		final AtomicInteger i = new AtomicInteger(0);
+		m_fakeDb.query(new ResultProcessor()
+		{
+			public Object getResult()
+			{
+				return null;
+			}
+
+			public boolean process(ResultSet result) throws SQLException
+			{
+				assertEquals(i.getAndIncrement() * 3, result.getObject(1));
+				return i.get() < 5;
+			}
+		}, "select * from any where y = ?", 3);
 	}
 
 	public void testEmptyImplementation() throws SQLException
@@ -61,6 +67,43 @@ public class FakeDbTest extends TestCase
 		m_fakeDb.beginTransaction();
 		m_fakeDb.beginTransaction(TransactionIsolation.SERIALIZABLE);
 		assertEquals(false, m_fakeDb.isInTransaction());
-		m_fakeDb.addSchema(null, null);
+		m_fakeDb.addAlias(null, null);
+	}
+
+	public void testMissingQuery()
+	{
+		try
+		{
+			m_fakeDb.queryAll("foobar");
+			fail();
+		}
+		catch (SQLException e)
+		{
+			assertEquals("Fake db 'fake' has no answer to the query 'foobar'.", e.getMessage());
+		}
+	}
+
+	public void testQueryOneZero() throws Exception
+	{
+		m_fakeDb.addQuery("test", new FakeResultGenerator()
+		{
+			public Object[] createResult(int row, Object[] arguments)
+			{
+				return null;
+			}
+		});
+		assertEquals(null, m_fakeDb.queryOne("test"));
+	}
+
+	public void testZeroInsert() throws Exception
+	{
+		m_fakeDb.addQuery("test", new FakeResultGenerator()
+		{
+			public Object[] createResult(int row, Object[] arguments)
+			{
+				return null;
+			}
+		});
+		assertEquals(null, m_fakeDb.insert("test"));
 	}
 }

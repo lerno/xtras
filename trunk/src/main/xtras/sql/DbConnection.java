@@ -1,56 +1,67 @@
 package xtras.sql;
 
+import xtras.lang.ObjectExtras;
+
 import java.sql.*;
+import java.util.List;
 
 /** @author Christoffer Lerno */
 class DbConnection
 {
 	private Connection m_connection;
 	private DbPool m_pool;
-	private PreparedStatement m_currentStatement;
-	private ResultSet m_resultSet;
-	private boolean m_inTransaction;
-	private StackTraceElement[] m_stackTrace;
 	private boolean m_hasErrors;
+	private final SingleResultProcessor m_singleResultProcessor;
+	private final AllResultProcessor m_allResultProcessor;
 
 	public DbConnection()
 	{
-		m_inTransaction = false;
-		m_stackTrace = null;
+		m_singleResultProcessor = new SingleResultProcessor();
+		m_allResultProcessor = new AllResultProcessor();
+		m_pool = null;
+		m_connection = null;
 		m_hasErrors = false;
 	}
 
-	public ResultSet query(String sql, Object... args) throws SQLException
+	private Connection newConnection(DbPool pool) throws SQLException
 	{
-		try
+		if (m_connection != null)
 		{
-			openStatement(sql, args);
-			m_resultSet = m_currentStatement.executeQuery();
-			return m_resultSet;
+			if (!ObjectExtras.equals(m_pool, pool))
+			{
+				try
+				{
+					rollback();
+				}
+				catch (Exception e)
+				{
+					// Ignore the rollback result since our original error
+					// is using another connection.
+				}
+				throw new SQLException("Tried to mix multiple connections in single transaction.");
+			}
+			return m_connection;
 		}
-		catch (SQLException e)
+		else
 		{
-			m_hasErrors = true;
-			throw e;
+			return pool.acquire();
 		}
 	}
 
-	@SuppressWarnings({"JDBCResourceOpenedButNotSafelyClosed"})
-	public <T> T insert(String sql, Object... args) throws SQLException
+	public <T> T query(DbPool pool, ResultProcessor<T> processor, String sql, Object... args) throws SQLException
 	{
+		PreparedStatement statement = null;
+		ResultSet resultSet = null;
+		Connection connection = newConnection(pool);
 		try
 		{
-			openStatement(sql, args);
-			m_currentStatement.executeUpdate();
-			m_resultSet = m_currentStatement.getGeneratedKeys();
-			if (m_resultSet.next())
+			statement = preparedStatement(connection, sql, args);
+			resultSet = statement.executeQuery();
+			while (resultSet.next())
 			{
-				return (T) SQL.readResultSet(m_resultSet);
+				if (!processor.process(resultSet)) break;
 			}
-			else
-			{
-				return null;
-			}
+			return processor.getResult();
 		}
 		catch (SQLException e)
 		{
@@ -59,193 +70,116 @@ class DbConnection
 		}
 		finally
 		{
-			close();
+			SQL.closeSilently(resultSet);
+			SQL.closeSilently(statement);
+			close(pool, connection);
 		}
 	}
 
-	public void closeStatement()
+	private void close(DbPool pool, Connection connection)
 	{
-		SQL.closeSilently(m_resultSet);
-		m_resultSet = null;
-		SQL.closeSilently(m_currentStatement);
-		m_currentStatement = null;
+		if (ObjectExtras.equals(m_connection, connection)) return;
+		pool.release(connection, m_hasErrors);
 	}
 
-	private boolean shouldReleaseConnection()
+	public void beginTransaction(DbPool pool, TransactionIsolation transactionIsolation) throws SQLException
 	{
-		if (m_connection == null) return false;
-		try
+		if (m_connection != null)
 		{
-			if (!m_hasErrors &&
-			    !m_connection.isClosed() &&
-			    m_inTransaction) return false;
-		}
-		catch (SQLException e)
-		{
-			// Ignore exception on isClosed(), treat as "should release".
-		}
-		return true;
-	}
-
-	private void releaseConnection(DbPool pool)
-	{
-		if (!shouldReleaseConnection()) return;
-		pool.release(m_connection, m_hasErrors);
-		m_inTransaction = false;
-		m_connection = null;
-		m_stackTrace = null;
-		m_hasErrors = false;
-		m_pool = null;
-	}
-
-	private void setAutoCommit(boolean value) throws SQLException
-	{
-		try
-		{
-			getConnection().setAutoCommit(value);
-		}
-		catch (SQLException e)
-		{
-			m_hasErrors = true;
-			throw e;
-		}
-	}
-
-	public DbConnection open(DbPool pool) throws SQLException
-	{
-		try
-		{
-			if (m_connection != null)
-			{
-				// Opening a connection while
-				// in a transaction on the same pool is a no op.
-				if (m_inTransaction)
-				{
-					if (pool.equals(m_pool)) return this;
-					throw addStackTrace(new SQLException("Changed pool during transaction."));
-				}
-				throw addStackTrace(new SQLException("Connection not properly closed."));
-			}
-			m_connection = pool.acquire();
-			m_pool = pool;
-			m_hasErrors = false;
-			setAutoCommit(true);
-			if (Db.getDebugFlag())
-			{
-				StackTraceElement[] elements = Thread.currentThread().getStackTrace();
-				if (elements.length > 3)
-				{
-					m_stackTrace = new StackTraceElement[elements.length - 3];
-					System.arraycopy(elements, 3, m_stackTrace, 0, m_stackTrace.length);
-				}
-			}
-			return this;
-		}
-		catch (SQLException e)
-		{
-			m_hasErrors = true;
-			close();
-			throw e;
-		}
-	}
-
-	@SuppressWarnings({"ThrowableInstanceNeverThrown"})
-	private SQLException addStackTrace(SQLException e)
-	{
-		if (m_stackTrace != null)
-		{
-			SQLException openException = new SQLException("Connection opened but not closed.");
-			openException.setStackTrace(m_stackTrace);
-			e.initCause(openException);
-		}
-		return e;
-	}
-
-	public boolean isInTransaction()
-	{
-		return m_inTransaction;
-	}
-
-	public void startTransaction(TransactionIsolation transactionIsolation) throws SQLException
-	{
-		if (m_inTransaction)
-		{
+			releaseTransaction();
 			throw new SQLException("Tried to start transaction while already in transaction.");
 		}
-		setAutoCommit(false);
-		if (transactionIsolation != null)
+		Connection c = null;
+		try
 		{
-			m_connection.setTransactionIsolation(transactionIsolation.getId());
+			c = newConnection(pool);
+			c.setAutoCommit(false);
+			if (transactionIsolation != null)
+			{
+				c.setTransactionIsolation(transactionIsolation.getId());
+			}
+			m_connection = c;
+			m_pool = pool;
 		}
-		m_inTransaction = true;
+		catch (SQLException e)
+		{
+			m_hasErrors = true;
+			close(pool, c);
+			throw e;
+		}
 	}
 
 	public void rollback() throws SQLException
 	{
 		try
 		{
-			if (!m_inTransaction) throw new SQLException("Tried to rollback outside of transaction.");
-			m_inTransaction = false;
+			if (m_connection == null) throw new SQLException("Tried to rollback outside of transaction.");
 			m_connection.rollback();
+		}
+		catch (SQLException e)
+		{
+			m_hasErrors = true;
+			throw e;
 		}
 		finally
 		{
-			close();
+			releaseTransaction();
 		}
 
 	}
 
-	public void close()
+	private void releaseTransaction()
 	{
-		closeStatement();
-		releaseConnection(m_pool);
+		if (m_connection != null)
+		{
+			try
+			{
+				m_connection.rollback();
+			}
+			catch (Exception e)
+			{
+				m_hasErrors = true;
+			}
+			Connection c = m_connection;
+			DbPool pool = m_pool;
+			m_pool = null;
+			m_connection = null;
+			pool.release(c, m_hasErrors);
+		}
 	}
+
 
 	@SuppressWarnings({"JDBCResourceOpenedButNotSafelyClosed"})
-	public DbConnection openStatement(String query, Object... args) throws SQLException
+	private PreparedStatement preparedStatement(Connection c, String query, Object... args) throws SQLException
 	{
-		if (m_connection == null)
-		{
-			throw new SQLException("Tried to open statement without opening a connection.");
-		}
-		if (m_currentStatement != null)
-		{
-			throw new SQLException("Tried to open statement with another statement open.");
-		}
+		PreparedStatement statement = null;
 		try
 		{
-			m_currentStatement = m_connection.prepareStatement(query);
+			statement = c.prepareStatement(query);
 			int index = 0;
 			for (Object arg : args)
 			{
-				m_currentStatement.setObject(++index, arg);
+				statement.setObject(++index, arg);
 			}
-			return this;
+			return statement;
 		}
 		catch (SQLException e)
 		{
+			SQL.closeSilently(statement);
 			m_hasErrors = true;
 			throw e;
 		}
 	}
 
-	public Connection getConnection() throws SQLException
+	public int update(DbPool pool, String update, Object... args) throws SQLException
 	{
-		if (!isOpen()) throw new SQLException("Connection not open.");
-		return m_connection;
-	}
-
-	public boolean isOpen()
-	{
-		return m_connection != null;
-	}
-
-	public int update(String update, Object... args) throws SQLException
-	{
+		PreparedStatement statement = null;
+		ResultSet resultSet = null;
+		Connection connection = newConnection(pool);
 		try
 		{
-			openStatement(update, args);
-			return m_currentStatement.executeUpdate();
+			statement = preparedStatement(connection, update, args);
+			return statement.executeUpdate();
 		}
 		catch (SQLException e)
 		{
@@ -254,7 +188,9 @@ class DbConnection
 		}
 		finally
 		{
-			close();
+			SQL.closeSilently(resultSet);
+			SQL.closeSilently(statement);
+			close(pool, connection);
 		}
 	}
 
@@ -262,16 +198,20 @@ class DbConnection
 	{
 		try
 		{
-			if (!m_inTransaction)
+			if (m_connection == null)
 			{
 				throw new SQLException("Tried to commit transaction outside of transaction.");
 			}
-			m_inTransaction = false;
 			m_connection.commit();
+		}
+		catch (SQLException e)
+		{
+			m_hasErrors = true;
+			throw e;
 		}
 		finally
 		{
-			close();
+			releaseTransaction();
 		}
 
 	}
@@ -280,5 +220,50 @@ class DbConnection
 	{
 		return m_hasErrors;
 	}
+
+	public <T> T queryOne(DbPool pool, String query, Object... args) throws SQLException
+	{
+		m_singleResultProcessor.reset();
+		return (T) query(pool, m_singleResultProcessor, query, args);
+	}
+
+
+	public <T> List<T> queryAll(DbPool pool, String query, Object... args) throws SQLException
+	{
+		m_allResultProcessor.reset();
+		return (List<T>) query(pool, m_allResultProcessor, query, args);
+	}
+
+	@SuppressWarnings({"JDBCResourceOpenedButNotSafelyClosed"})
+	public Object insert(DbPool pool, String insert, Object... args) throws SQLException
+	{
+		PreparedStatement statement = null;
+		ResultSet resultSet = null;
+		Connection connection = newConnection(pool);
+		try
+		{
+			statement = preparedStatement(connection, insert, args);
+			statement.executeUpdate();
+			resultSet = statement.getGeneratedKeys();
+			return SQL.readResultSet(resultSet);
+		}
+		catch (SQLException e)
+		{
+			m_hasErrors = true;
+			throw e;
+		}
+		finally
+		{
+			SQL.closeSilently(resultSet);
+			SQL.closeSilently(statement);
+			close(pool, connection);
+		}
+	}
+
+	public boolean isInTransaction()
+	{
+		return m_connection != null;
+	}
+
 }
 

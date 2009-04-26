@@ -6,7 +6,6 @@ import java.util.*;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
 import java.sql.SQLException;
-import java.sql.ResultSet;
 
 /** @author Christoffer Lerno */
 public class PooledDbProxy implements DbProxy
@@ -57,7 +56,7 @@ public class PooledDbProxy implements DbProxy
 	 * @param alias the alias to use for this schema.
 	 * @param schema the key to use with this schema.
 	 */
-	public void addSchema(String alias, String schema)
+	public void addAlias(String alias, String schema)
 	{
 		alias = alias.toLowerCase();
 		Pattern pattern = Pattern.compile(Pattern.quote("<" + alias + ">."), Pattern.CASE_INSENSITIVE);
@@ -92,11 +91,6 @@ public class PooledDbProxy implements DbProxy
 		return s_connections.get();
 	}
 
-	private DbConnection open() throws SQLException
-	{
-		return getConnection().open(m_pool);
-	}
-
 	public void beginTransaction() throws SQLException
 	{
 		beginTransaction(null);
@@ -104,17 +98,7 @@ public class PooledDbProxy implements DbProxy
 
 	public void beginTransaction(TransactionIsolation isolation) throws SQLException
 	{
-		DbConnection c = getConnection();
-		try
-		{
-			open();
-			c.startTransaction(isolation);
-		}
-		catch (SQLException e)
-		{
-			close();
-			throw e;
-		}
+		getConnection().beginTransaction(m_pool, isolation);
 	}
 
 	public void rollback() throws SQLException
@@ -127,25 +111,30 @@ public class PooledDbProxy implements DbProxy
 		getConnection().commit();
 	}
 
-	public void close()
-	{
-		getConnection().close();
-	}
-
 	@SuppressWarnings({"RedundantTypeArguments"})
 	public <T> T insert(String insert, Object... args) throws SQLException
 	{
-		return open().<T>insert(translate(insert), args);
+		return (T) getConnection().insert(m_pool, translate(insert), args);
 	}
 
-	public ResultSet query(String query, Object... args) throws SQLException
+	public <T> T query(ResultProcessor<T> processor, String query, Object... args) throws SQLException
 	{
-		return open().query(translate(query), args);
+		return getConnection().query(m_pool, processor, translate(query), args); 
+	}
+
+	public <T> T queryOne(String query, Object... args) throws SQLException
+	{
+		return (T) getConnection().queryOne(m_pool, translate(query), args);
+	}
+
+	public <T> List<T> queryAll(String query, Object... args) throws SQLException
+	{
+		return getConnection().queryAll(m_pool, translate(query), args);
 	}
 	
 	public int update(String update, Object... args) throws SQLException
 	{
-		return open().update(translate(update), args);
+		return getConnection().update(m_pool, translate(update), args);
 	}
 
 	public String getName()
@@ -166,11 +155,6 @@ public class PooledDbProxy implements DbProxy
 	public boolean isInTransaction()
 	{
 		return getConnection().isInTransaction();
-	}
-
-	DbPool getPool()
-	{
-		return m_pool;
 	}
 
 	private static class Schema extends Tuple<String, Pattern>

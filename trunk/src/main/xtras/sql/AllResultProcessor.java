@@ -8,17 +8,7 @@ import java.sql.SQLException;
 /** @author Christoffer Lerno */
 public class AllResultProcessor<D> implements ResultProcessor<List<D>>
 {
-	public List<D> m_value;
-
-	public AllResultProcessor()
-	{
-		reset();
-	}
-
-	public void reset()
-	{
-		m_value = new ArrayList<D>();
-	}
+	public List<D> m_value = new ArrayList<D>();
 
 	public List<D> getResult()
 	{

@@ -61,12 +61,11 @@ public class FakeDbTest extends TestCase
 	{
 		// All these are no ops.
 		m_fakeDb.commit();
-		m_fakeDb.close();
 		m_fakeDb.rollback();
-		assertEquals(false, m_fakeDb.isInTransaction());
-		m_fakeDb.beginTransaction();
+		assertEquals(false, m_fakeDb.inTransaction());
+		m_fakeDb.beginTransaction(null);
 		m_fakeDb.beginTransaction(TransactionIsolation.SERIALIZABLE);
-		assertEquals(false, m_fakeDb.isInTransaction());
+		assertEquals(false, m_fakeDb.inTransaction());
 		m_fakeDb.addAlias(null, null);
 	}
 
@@ -74,7 +73,7 @@ public class FakeDbTest extends TestCase
 	{
 		try
 		{
-			m_fakeDb.queryAll("foobar");
+			m_fakeDb.query(null, "foobar");
 			fail();
 		}
 		catch (SQLException e)
@@ -92,7 +91,7 @@ public class FakeDbTest extends TestCase
 				return null;
 			}
 		});
-		assertEquals(null, m_fakeDb.queryOne("test"));
+		assertEquals(null, m_fakeDb.query(new SingleResultProcessor(), "test"));
 	}
 
 	public void testZeroInsert() throws Exception

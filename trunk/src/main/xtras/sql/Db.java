@@ -239,7 +239,7 @@ public final class Db
 	 */
 	public static void beginTransaction() throws SQLException
 	{
-		getSelectedDb().beginTransaction();
+		getSelectedDb().beginTransaction(null);
 	}
 
 	/**
@@ -327,7 +327,7 @@ public final class Db
 	@SuppressWarnings({"RedundantTypeArguments"})
 	public static <T> T queryOne(String query, Object... args) throws SQLException
 	{
-		return (T) getSelectedDb().queryOne(query, args);
+		return getSelectedDb().query(new SingleResultProcessor<T>(), query, args);
 	}
 
 	/**
@@ -362,7 +362,7 @@ public final class Db
 	 */
 	public static <T> List<T> queryAll(String query, Object... args) throws SQLException
 	{
-		return (List<T>) getSelectedDb().queryAll(query, args);
+		return getSelectedDb().query(new AllResultProcessor<T>(), query, args);
 	}
 
 	/**
@@ -436,6 +436,6 @@ public final class Db
 	 */
 	public static boolean isInTransaction()
 	{
-		return getSelectedDb().isInTransaction();
+		return getSelectedDb().inTransaction();
 	}
 }

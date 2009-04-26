@@ -35,11 +35,11 @@ public class DbConnectionTest extends TestCase
 	public void testQueryErrors() throws Exception
 	{
 		assertEquals(false, m_dbConnection.hasErrors());
-		m_dbConnection.queryOne(m_pool, "select 1");
+		m_dbConnection.query(m_pool, new SingleResultProcessor(), "select 1");
 		assertEquals(false, m_dbConnection.hasErrors());
 		try
 		{
-			m_dbConnection.queryOne(m_pool, "Illegal query");
+			m_dbConnection.query(m_pool, new SingleResultProcessor(), "Illegal query");
 			fail();
 		}
 		catch (SQLException e)
@@ -66,10 +66,10 @@ public class DbConnectionTest extends TestCase
 	public void testChangingPoolsDuringTransaction() throws Exception
 	{
 		m_dbConnection.beginTransaction(m_pool, null);
-		m_dbConnection.queryOne(m_pool, "select 1");
+		m_dbConnection.query(m_pool, new SingleResultProcessor(), "select 1");
 		try
 		{
-			m_dbConnection.queryOne(new DbPool("x", "y", "z", 0), "select 1");
+			m_dbConnection.query(new DbPool("x", "y", "z", 0), new SingleResultProcessor(), "select 1");
 			fail();
 		}
 		catch (SQLException e)
@@ -85,11 +85,11 @@ public class DbConnectionTest extends TestCase
 		Connection c = m_pool.acquire();
 		m_pool.release(c, false);
 		m_dbConnection.beginTransaction(m_pool, null);
-		m_dbConnection.queryOne(m_pool, "select 1");
+		m_dbConnection.query(m_pool, new SingleResultProcessor(), "select 1");
 		try
 		{
 			c.close();
-			m_dbConnection.queryOne(new DbPool("x", "y", "z", 0), "select 1");
+			m_dbConnection.query(new DbPool("x", "y", "z", 0), new SingleResultProcessor(), "select 1");
 			fail();
 		}
 		catch (SQLException e)

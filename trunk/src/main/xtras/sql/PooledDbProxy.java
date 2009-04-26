@@ -1,10 +1,5 @@
 package xtras.sql;
 
-import xtras.util.Tuple;
-
-import java.util.*;
-import java.util.regex.Pattern;
-import java.util.regex.Matcher;
 import java.sql.SQLException;
 
 /** @author Christoffer Lerno */
@@ -19,9 +14,7 @@ public class PooledDbProxy implements DbProxy
 		}
 	};
 
-	private final Object m_schemaLock = new Object();
-	private final List<Schema> m_schemas;
-	private final Set<String> m_alias;
+	private final SchemaAliasTranslator m_translator;
 	private final String m_key;
 	private final DbPool m_pool;
 
@@ -46,54 +39,28 @@ public class PooledDbProxy implements DbProxy
 		Class.forName(driverClassName);
 		m_key = key;
 		m_pool = new DbPool(url, username, password, poolSize);
-		m_alias = new HashSet<String>();
-		m_schemas = new ArrayList<Schema>();
+		m_translator = new SchemaAliasTranslator();
 	}
 
 	/**
-	 * Associates an alias with a schema.
-	 *
-	 * @param alias the alias to use for this schema.
-	 * @param schema the key to use with this schema.
+	 * {@inheritDoc}
 	 */
 	public void addAlias(String alias, String schema)
 	{
-		alias = alias.toLowerCase();
-		Pattern pattern = Pattern.compile(Pattern.quote("<" + alias + ">."), Pattern.CASE_INSENSITIVE);
-		synchronized (m_schemaLock)
-		{
-			if (m_alias.contains(alias)) throw new IllegalStateException("Db schema '" +
-			                                                             alias + "' already registered " +
-			                                                             "with key '" + m_key + "'.");
-			m_schemas.add(new Schema(schema, pattern));
-			m_alias.add(alias);
-		}
+		m_translator.addAlias(alias, schema);
 	}
 
-	public synchronized String translate(String query)
+	/**
+	 * {@inheritDoc}
+	 */
+	public String translate(String query)
 	{
-		synchronized (m_schemaLock)
-		{
-			for (Schema schema : m_schemas)
-			{
-				Matcher matcher = schema.second.matcher(query);
-				if (matcher.find())
-				{
-					query = matcher.replaceAll(schema.first + ".");
-				}
-			}
-		}
-		return query;
+		return m_translator.translate(query);
 	}
 
-	DbConnection getConnection()
+	private DbConnection getConnection()
 	{
 		return s_connections.get();
-	}
-
-	public void beginTransaction() throws SQLException
-	{
-		beginTransaction(null);
 	}
 
 	public void beginTransaction(TransactionIsolation isolation) throws SQLException
@@ -121,16 +88,6 @@ public class PooledDbProxy implements DbProxy
 	{
 		return getConnection().query(m_pool, processor, translate(query), args); 
 	}
-
-	public <T> T queryOne(String query, Object... args) throws SQLException
-	{
-		return (T) getConnection().queryOne(m_pool, translate(query), args);
-	}
-
-	public <T> List<T> queryAll(String query, Object... args) throws SQLException
-	{
-		return getConnection().queryAll(m_pool, translate(query), args);
-	}
 	
 	public int update(String update, Object... args) throws SQLException
 	{
@@ -152,14 +109,9 @@ public class PooledDbProxy implements DbProxy
 		m_pool.shutdown();
 	}
 
-	public boolean isInTransaction()
+	public boolean inTransaction()
 	{
 		return getConnection().isInTransaction();
-	}
-
-	private static class Schema extends Tuple<String, Pattern>
-	{
-		private Schema(String object1, Pattern object2) { super(object1, object2); }
 	}
 
 }

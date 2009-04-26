@@ -43,19 +43,15 @@ public class FakeDb implements DbProxy
 
 	public void addAlias(String alias, String schema) {}
 
-	public <T> T queryOne(String query, Object... args) throws SQLException
-	{
-		FakeResultSet result = getResult(query, args);
-		return (T) (result.next() ? result.getValues() : null);
-	}
+	/**
+	 * This method does nothing.
+	 */
+	public void beginTransaction(TransactionIsolation isolation) {}
 
-	public void beginTransaction(TransactionIsolation isolation) throws SQLException {}
-
-	public void beginTransaction() throws SQLException {}
-
-	public void close() {}
-
-	public void commit() throws SQLException {}
+	/**
+	 * This method does nothing.
+	 */
+	public void commit() {}
 
 	public String getName()
 	{
@@ -88,20 +84,9 @@ public class FakeDb implements DbProxy
 		m_shutdown = true;
 	}
 
-	public boolean isInTransaction()
+	public boolean inTransaction()
 	{
 		return false;
-	}
-
-	public <T> List<T> queryAll(String query, Object... args) throws SQLException
-	{
-		FakeResultSet result = getResult(query, args);
-		List<T> list = new ArrayList<T>();
-		while (result.next())
-		{
-			list.add((T) result.getValues());
-		}
-		return list;
 	}
 
 	public int update(String update, Object... args) throws SQLException
@@ -137,6 +122,18 @@ public class FakeDb implements DbProxy
 			m_values = null;
 			m_arguments = arguments;
 			m_generator = generator;
+		}
+
+		public ResultSetMetaData getMetaData() throws SQLException
+		{
+			return ObjectExtras.adapt(ResultSetMetaData.class,
+			                          new Object()
+			{
+				public int getColumnCount() throws SQLException
+				{
+					return m_values == null ? 0 : m_values.length;
+				}
+			});
 		}
 
 		public Object getObject(int columnIndex) throws SQLException

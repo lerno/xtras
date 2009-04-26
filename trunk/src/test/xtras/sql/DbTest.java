@@ -118,7 +118,7 @@ public class DbTest extends TestCase
 		}
 		catch (IllegalStateException e)
 		{
-			assertEquals("Db schema 'bar' already registered with key 'sqlite'.", e.getMessage());
+			assertEquals("Db schema 'bar' already registered.", e.getMessage());
 		}
 		try
 		{

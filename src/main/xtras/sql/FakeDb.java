@@ -41,7 +41,13 @@ public class FakeDb implements DbProxy
 		m_queries.put(query, resultGenerator);
 	}
 
-	public void addSchema(String alias, String schema) {}
+	public void addAlias(String alias, String schema) {}
+
+	public <T> T queryOne(String query, Object... args) throws SQLException
+	{
+		FakeResultSet result = getResult(query, args);
+		return (T) (result.next() ? result.getValues() : null);
+	}
 
 	public void beginTransaction(TransactionIsolation isolation) throws SQLException {}
 
@@ -59,7 +65,7 @@ public class FakeDb implements DbProxy
 	private FakeResultSet getResult(String query, Object[] args) throws SQLException
 	{
 		FakeResultGenerator generator = m_queries.get(query);
-		if (generator == null) throw new SQLException("Fake db has no answer to the query '" + query + "'.");
+		if (generator == null) throw new SQLException("Fake db '" + m_key + "' has no answer to the query '" + query + "'.");
 		return new FakeResultSet(generator, args);
 	}
 
@@ -75,11 +81,6 @@ public class FakeDb implements DbProxy
 		return !m_shutdown;
 	}
 
-	public ResultSet query(String query, Object... args) throws SQLException
-	{
-		return ObjectExtras.adapt(ResultSet.class, getResult(query, args));
-	}
-
 	public void rollback() throws SQLException {}
 
 	public void shutdown()
@@ -92,10 +93,35 @@ public class FakeDb implements DbProxy
 		return false;
 	}
 
+	public <T> List<T> queryAll(String query, Object... args) throws SQLException
+	{
+		FakeResultSet result = getResult(query, args);
+		List<T> list = new ArrayList<T>();
+		while (result.next())
+		{
+			list.add((T) result.getValues());
+		}
+		return list;
+	}
+
 	public int update(String update, Object... args) throws SQLException
 	{
-		ResultSet set = query(update, args);
-		return set.next() ? (Integer) set.getObject(1) : 0;
+		FakeResultSet result = getResult(update, args);
+		return result.next() ? (Integer) result.getObject(1) : 0;
+	}
+
+	public <T> T query(ResultProcessor<T> processor, String query, Object... args) throws SQLException
+	{
+		FakeResultSet result = getResult(query, args);
+		ResultSet resultSet = ObjectExtras.adapt(ResultSet.class, result);
+		while (resultSet.next())
+		{
+			if (!processor.process(resultSet))
+			{
+				break;
+			}
+		}
+		return processor.getResult();
 	}
 
 	private static class FakeResultSet
@@ -113,18 +139,6 @@ public class FakeDb implements DbProxy
 			m_generator = generator;
 		}
 
-		public ResultSetMetaData getMetaData() throws SQLException
-		{
-			return ObjectExtras.adapt(ResultSetMetaData.class,
-			                          new Object()
-			{
-				public int getColumnCount() throws SQLException
-				{
-					return m_values == null ? 0 : m_values.length;
-				}
-			});
-		}
-
 		public Object getObject(int columnIndex) throws SQLException
 		{
 			return m_values[columnIndex - 1];
@@ -132,7 +146,7 @@ public class FakeDb implements DbProxy
 
 		public int getRow() throws SQLException
 		{
-			return m_row;
+			return m_row + 1;
 		}
 
 		public Object getValues()

@@ -7,7 +7,11 @@ import java.util.LinkedList;
 import java.util.Date;
 import java.text.SimpleDateFormat;
 
-/** @author Christoffer Lerno */
+/**
+ * Time related utility functions and constants.
+ *
+ * @author Christoffer Lerno
+ */
 public final class Time
 {
 	public static final long TEN_MILLISECONDS = 10;
@@ -55,6 +59,16 @@ public final class Time
 
 	/**
 	 * Return a string describing the time difference as a string.
+	 * <p/>
+	 * Examples:
+	 * <br/>
+	 * {@code 1500} -> {@code "1 second"}
+	 * <br/>
+	 * {@code 90000} -> {@code "1 min 30 sec"}
+	 * <br/>
+	 * {@code 44712000} -> {@code "12h 25m 12s"}
+	 * <br/>
+	 * {@code 277930000} -> {@code "3d 5h 12m 10s"}
 	 *
 	 * @param timeDifferenceInMs the time difference in milliseconds.
 	 * @return a string of the format x seconds/x minutes/x hours/x days.
@@ -138,7 +152,7 @@ public final class Time
 	 * Returns a representation of a ms time.
 	 *
 	 * @param timeValue the value in ms.
-	 * @return time in the format "?d ?h ?m ?s ?ms"
+	 * @return time in the format "%d %h %m %s %ms"
 	 */
 	public static String timeIntervalToString(long timeValue)
 	{
@@ -170,6 +184,13 @@ public final class Time
 		return rep.isEmpty() ? "0ms" : CollectionExtras.join(rep, " ");
 	}
 
+	/**
+	 * Formats a time to a 24h clock with ms.
+	 * <p>
+	 * E.g. {@code 15:44:23.123}.
+	 * @param timeInMs the time in ms, as defined by {@link System#currentTimeMillis()}.
+	 * @return a 24h clock with ms.
+	 */
 	public static String toMsClock(long timeInMs)
 	{
 		return TIME_FORMAT_MS.format(new Date(timeInMs));

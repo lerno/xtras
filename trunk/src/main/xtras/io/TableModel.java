@@ -13,7 +13,7 @@ import java.util.Comparator;
  * @author Christoffer Lerno
  * @author Per Huss (original idea & implementation)
  */
-public class TableModel
+class TableModel
 {
 	protected String[] m_columnNames;
 	private int[] m_columnWidths;

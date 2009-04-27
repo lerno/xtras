@@ -2,7 +2,19 @@ package xtras.util;
 
 import java.util.*;
 
-/** @author Christoffer Lerno */
+/**
+ * A counted set allows each addition of an object to the set to be counted.
+ * <p/>
+ * Example:
+ * <pre>
+ * m_countedSet.addAll(Arrays.asList("a", "b", "b", "a", "c", "a"));
+ * m_countedSet.get("a"); // returns 3.
+ * m_countedSet.get("b"); // returns 2.
+ * m_countedSet.get("c"); // returns 3.
+ * </pre>
+ * 
+ * @author Christoffer Lerno
+ */
 public class CountedSet<C> extends HashMap<C, Integer>
 {
 	private static final long serialVersionUID = 5092809703906258574L;
@@ -162,7 +174,7 @@ public class CountedSet<C> extends HashMap<C, Integer>
 	/**
 	 * Retains only the elements in this set that are contained in the
 	 * specified collection.
-	 * <b>
+	 * <p/>
 	 * Removing an element means setting the counter of that key to 0.
 	 *
 	 * @param c collection that defines which elements this set will retain.
@@ -179,7 +191,7 @@ public class CountedSet<C> extends HashMap<C, Integer>
 	/**
 	 * Removes from this set all of its elements that are contained in the
 	 * specified collection.
-	 * <p>
+	 * <p/>
 	 * Removing a value also means setting its counter to 0
 	 *
 	 * @param c collection that defines which elements will be removed from

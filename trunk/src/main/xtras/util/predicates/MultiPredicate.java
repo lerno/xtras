@@ -12,7 +12,7 @@ import java.util.ArrayList;
  *
  * @author Christoffer Lerno
  */
-public abstract class MultiPredicate<P> implements Predicate<P>
+abstract class MultiPredicate<P> implements Predicate<P>
 {
 	protected List<Predicate<P>> m_predicates;
 

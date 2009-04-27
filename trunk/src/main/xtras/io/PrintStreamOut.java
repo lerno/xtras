@@ -2,7 +2,11 @@ package xtras.io;
 
 import java.io.PrintStream;
 
-/** @author Christoffer Lerno */
+/**
+ * A class that adapts a PrintStream to {@link xtras.io.Out}
+ *
+ * @author Christoffer Lerno
+ */
 class PrintStreamOut implements Out
 {
 	private final PrintStream m_stream;

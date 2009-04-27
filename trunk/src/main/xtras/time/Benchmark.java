@@ -3,8 +3,15 @@ package xtras.time;
 /**
  * Helper for common benchmarks.
  * <p>Usage is simple:
- * <p>Invoke <code>Benchmark.start()</code> to begin taking time, call <code>Benchmark.end()</code> to end.
- * <br>The result will then be available by calling <code>Benchmark.time()</code>.
+ * <pre>
+ * // Start the benchmark.
+ * Benchmark.start();
+ *
+ * ... code to benchmark ...
+ *
+ * long timeItTook = Benchmark.end();
+ * System.out.println("Code took " + Benchmark.time() + " ms.");
+ * </pre>
  * <p>This class uses thread local variables and so may be used simultaneously on several threads
  * without benchmarks interfering with each other.
  *
@@ -41,6 +48,8 @@ public final class Benchmark
 	}
 
 	/**
+	 * Return the last benchmark.
+	 *
 	 * @return the time between start time and end time.
 	 */
 	public static long time()

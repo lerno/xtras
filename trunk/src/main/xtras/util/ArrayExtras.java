@@ -72,6 +72,9 @@ public final class ArrayExtras
 	}
 
 	/**
+	 * Concatenates a list of values to a string, separating each object with the
+	 * given separator.
+	 *
 	 * @param values non null array
 	 * @param separator a non null String
 	 * @return String rep, example toString(new int[]{3,5,8,9},"*"); ->  "3*5*8*9"

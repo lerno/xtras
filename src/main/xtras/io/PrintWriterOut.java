@@ -2,7 +2,11 @@ package xtras.io;
 
 import java.io.PrintWriter;
 
-/** @author Christoffer Lerno */
+/**
+ * A class that adapts PrintWriter to {@link xtras.io.Out}
+ *
+ * @author Christoffer Lerno
+ */
 class PrintWriterOut implements Out
 {
 	private final PrintWriter m_writer;

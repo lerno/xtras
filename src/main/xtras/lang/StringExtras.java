@@ -4,9 +4,16 @@ import xtras.util.Predicate;
 
 import java.util.*;
 
-/** @author Christoffer Lerno */
+/**
+ * String utility functions.
+ *
+ * @author Christoffer Lerno
+ */
 public final class StringExtras
 {
+	/**
+	 * The line separator as returned by {@code System.getProperty("line.separator")}.
+	 */
 	public static final String LINE_SEPARATOR = System.getProperty("line.separator");
 
 	StringExtras()
@@ -203,7 +210,9 @@ public final class StringExtras
 		return append(new StringBuilder(Math.max(0, length)), ' ', length).toString();
 	}
 
-	// String filters
+	/**
+	 * This predicate will evaluate to true for empty lines.
+	 */
 	public final static Predicate<String> FILTER_EMPTY_STRING = new Predicate<String>()
 	{
 		public boolean evaluate(String string)
@@ -212,6 +221,9 @@ public final class StringExtras
 		}
 	};
 
+	/**
+	 * This predicate will evaluate to true for lines starting with '#'.
+	 */
 	public final static Predicate<String> FILTER_HASH_COMMENT = new Predicate<String>()
 	{
 		public boolean evaluate(String string)

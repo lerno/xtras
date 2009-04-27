@@ -5,7 +5,11 @@ import java.util.zip.DataFormatException;
 import java.util.zip.Inflater;
 import java.util.zip.Deflater;
 
-/** @author Christoffer Lerno */
+/**
+ * Utilities for byte-manipulation.
+ *
+ * @author Christoffer Lerno
+ */
 public final class ByteExtras
 {
 	private final static byte[] EMPTY_ARRAY = new byte[0];

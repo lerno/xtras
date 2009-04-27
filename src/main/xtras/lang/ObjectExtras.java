@@ -5,10 +5,14 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.InvocationTargetException;
 
-/** @author Christoffer Lerno */
+/**
+ * Utility methods for basic object.
+ *
+ * @author Christoffer Lerno
+ */
 public final class ObjectExtras
 {
-	protected ObjectExtras()
+	ObjectExtras()
 	{}
 
 	/**

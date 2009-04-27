@@ -6,9 +6,14 @@ import java.io.*;
 import java.net.*;
 import java.util.*;
 
-/** @author Christoffer Lerno */
+/**
+ * Utility functions for classes in {@code java.io.*} and {@code java.net.*}.
+ * 
+ * @author Christoffer Lerno
+ */
 public class IO
 {
+	IO() {}
 
 	private static NetworkInterfaceProvider s_provider = new DefaultNetworkInterfaceProvider();
 
@@ -197,7 +202,12 @@ public class IO
 		}
 	}
 
-
+	/**
+	 * Get a list of all network interfaces.
+	 *
+	 * @return a list of network interfaces on this machine.
+	 * @throws SocketException if there was an exception retrieving the interfaces.
+	 */
 	public static List<NetworkInterface> getNetworkInterfaces() throws SocketException
 	{
 		Enumeration<NetworkInterface> e = s_provider.getNetworkInterfaces();
@@ -280,7 +290,7 @@ public class IO
 		return null;
 	}
 
-	protected static InetAddress getBestIpGuess(Map<String, InetAddress> addresses) throws UnknownHostException
+	static InetAddress getBestIpGuess(Map<String, InetAddress> addresses) throws UnknownHostException
 	{
 		InetAddress bestNonLocal = getBestNonLocalAddress(addresses);
 		if (bestNonLocal != null) return bestNonLocal;
@@ -290,11 +300,27 @@ public class IO
 		return firstLinkLocal == null ? InetAddress.getLocalHost() : firstLinkLocal;
 	}
 	/**
-	 * Returns the ip of first en* interface for this machine, if not available,
-	 * InetAddress.getLocalHost() will be used.
-	 * <p>
-	 * If any exceptions are thrown then method will default
-	 * to 127.0.0.1.
+	 * Returns the best possible guess of the external IP for this
+	 * machine.
+	 * <p/>
+	 * The selection is done as follows:
+	 * <br/>
+	 * 1. Find all network interfaces and sort them according to their name.
+	 * <br/>
+	 * 2. Select the first non-local interface, preferring any interface
+	 * with a name starting with 'e' (this is usually the
+	 * ethernet interface).
+	 * <br/>
+	 * 3. If no non-local is found, select the first site-local interface,
+	 * again prefer what we guess are the ethernet interfaces.
+	 * <br/>
+	 * 4. Seach through link-local addresses, again preferring ethernet if
+	 * possible,
+	 * <br/>
+	 * 5. If an IP still hasn't been found, default to InternetIf for this machine. If not available,
+	 * {@link java.net.InetAddress#getLocalHost()} will be used.
+	 * <br/>
+	 * 6. If an exception is thrown in steps 1-5 default to "127.0.0.1".
 	 *
 	 * @return The ip or 127.0.0.1 if we fail to extract the ip.
 	 */

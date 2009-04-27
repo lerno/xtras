@@ -6,8 +6,13 @@ import java.io.PrintWriter;
 import java.io.Writer;
 
 
-/** @author Christoffer Lerno */
-class Output
+/**
+ * This is a class that can produce well-formatted output to a stream or
+ * a writer. Includes possibility to print pretty tables.
+ *
+ * @author Christoffer Lerno
+ */
+public class Output
 {
 	private final Out m_writer;
 	private TableModel m_table;
@@ -193,6 +198,8 @@ class Output
 	}
 
 	/**
+	 * Get the number of rows in the current table.
+	 * 
 	 * @return the number of rows in the latest table created.
 	 */
 	public int getTableRows()

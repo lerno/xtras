@@ -4,8 +4,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 
 /**
- * A result processor is an anonymous class that is able to
- * process rows in a result set and collect the data into a single
+ * A helper object that is able to process rows in a result set and collect the data into a single
  * result.
  *
  * @author Christoffer Lerno

@@ -15,6 +15,9 @@ public final class Predicates
 {
 	Predicates() {}
 
+	/**
+	 * A predicate that evaluates to true if the object is not null.
+	 */
 	public final static Predicate NOT_NULL = new Predicate()
 	{
 
@@ -30,6 +33,9 @@ public final class Predicates
 
 	};
 
+	/**
+	 * A predicate that always evaluates to true.
+	 */
 	public final static Predicate TRUE = new Predicate()
 	{
 		public boolean evaluate(Object object)
@@ -44,6 +50,9 @@ public final class Predicates
 
 	};
 
+	/**
+	 * A predicate that always evaluates to false.
+	 */
 	public final static Predicate FALSE = new Predicate()
 	{
 		public boolean evaluate(Object object)
@@ -57,21 +66,31 @@ public final class Predicates
 		}
 	};
 
-	/** @return a predicate that evaluates to true for all non-null objects. */
+	/**
+	 * Returns a predicate that evaluates to true for all non-null objects.
+	 * @return a predicate that evaluates to true for non-null.
+	 */
 	@SuppressWarnings({"unchecked"})
 	public static <P> Predicate<P> notNullPredicate()
 	{
 		return NOT_NULL;
 	}
 
-	/** @return a predicate that always evaluates to true. */
+	/**
+	 * Returns a predicate that always evaluates to true.
+	 * @return a predicate that evaluates to true.
+	 */
 	@SuppressWarnings({"unchecked"})
 	public static <P> Predicate<P> truePredicate()
 	{
 		return TRUE;
 	}
 
-	/** @return a predicate that always evaluated to false; */
+	/**
+	 * Returns a predicate that always evaluates to false.
+	 *
+	 * @return a predicate that evaluates to false.
+	 */
 	@SuppressWarnings({"unchecked"})
 	public static <P> Predicate<P> falsePredicate()
 	{

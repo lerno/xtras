@@ -24,6 +24,15 @@ public final class ObjectExtras
 		return a == b || (a != null && a.equals(b));
 	}
 
+	/**
+	 * Creates a proxy to allow an object to partially adapt an interface.
+	 * The remaining methods will return null (when returning objects)
+	 * -1 for primitive numbers and false for primitive booleans.
+	 *
+	 * @param anInterface the interface to adapt.
+	 * @param o the object that partially implements the interface.
+	 * @return a proxy that "completely" implements the interface.
+	 */
 	public static <T> T adapt(Class<T> anInterface, Object o)
 	{
 		return (T) Proxy.newProxyInstance(anInterface.getClassLoader(),
@@ -31,6 +40,14 @@ public final class ObjectExtras
 		                                  new AdapterInvocationHandler(o));
 	}
 
+	/**
+	 * Creates a proxy around a class, to allow another object to
+	 * override parts of its functionality.
+	 *
+	 * @param toOverride the object to override.
+	 * @param overridingObject the object that has methods that overrides the particular object.
+	 * @return a proxy that overrides calls on the first object using implementation on the overriding object.
+	 */
 	public static <T> T override(T toOverride, Object overridingObject)
 	{
 		return (T) Proxy.newProxyInstance(toOverride.getClass().getClassLoader(),

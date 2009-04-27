@@ -81,7 +81,6 @@ public final class Db
 	private final static Object LOCK = new Object();
 	private final static Map<String, DbProxy> s_dbs = new HashMap<String, DbProxy>();
 	private final static ThreadLocal<DbProxy> s_activeDb = new ThreadLocal<DbProxy>();
-
 	private static DbProxy s_defaultDb = null;
 
 	/**

@@ -2,7 +2,12 @@ package xtras.sql;
 
 import java.sql.SQLException;
 
-/** @author Christoffer Lerno */
+/**
+ * This is a DbProxy that is backed by a DbPool. It uses thread local
+ * connection wrappers to allow it to be used from multiple threads at the same time.
+ *
+ * @author Christoffer Lerno
+ */
 public class PooledDbProxy implements DbProxy
 {
 	private final static ThreadLocal<DbConnection> s_connections = new ThreadLocal<DbConnection>()
@@ -62,6 +67,11 @@ public class PooledDbProxy implements DbProxy
 		return m_translator.translate(query);
 	}
 
+	/**
+	 * Retrieves the thread-local connection.
+	 *
+	 * @return the DbConnection for this thread.
+	 */
 	private DbConnection getConnection()
 	{
 		return s_connections.get();
@@ -124,6 +134,11 @@ public class PooledDbProxy implements DbProxy
 		m_pool.shutdown();
 	}
 
+	/**
+	 * Return the transaction status of the current connection.
+	 *
+	 * @return true if the current connection is in a transaction, false otherwise.
+	 */
 	public boolean inTransaction()
 	{
 		return getConnection().isInTransaction();

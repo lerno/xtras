@@ -7,17 +7,8 @@ import java.sql.SQLException;
  * A processor that reads a single row from a result set.
  *
  * @author Christoffer Lerno */
-public class SingleResultProcessor<C> implements ResultProcessor<C>
+public class SingleResultProcessor<C> extends AbstractResultProcessor<C>
 {
-	private C m_value = null;
-
-	/**
-	 * {@inheritDoc}
-	 */
-	public C getResult()
-	{
-		return m_value;
-	}
 
 	/**
 	 * Read the current row using {@link SQL#readResultSet(java.sql.ResultSet)},
@@ -29,7 +20,7 @@ public class SingleResultProcessor<C> implements ResultProcessor<C>
 	 */
 	public boolean process(ResultSet result) throws SQLException
 	{
-		m_value = (C) SQL.readResultSet(result);
+		setResult((C) SQL.readResultSet(result));
 		return false;
 	}
 }

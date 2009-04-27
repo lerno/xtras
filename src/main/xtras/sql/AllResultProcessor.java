@@ -5,19 +5,33 @@ import java.util.ArrayList;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-/** @author Christoffer Lerno */
-public class AllResultProcessor<D> implements ResultProcessor<List<D>>
+/**
+ * A processor that collects all values in a result set and returns it as
+ * a list.
+ *
+ * @author Christoffer Lerno
+ */
+public class AllResultProcessor<D> extends AbstractResultProcessor<List<D>>
 {
-	public List<D> m_value = new ArrayList<D>();
-
-	public List<D> getResult()
+	/**
+	 * Creates a new processor.
+	 */
+	public AllResultProcessor()
 	{
-		return m_value;
+		setResult(new ArrayList<D>());
 	}
 
-	public boolean process(ResultSet result) throws SQLException
+	/**
+	 * Adds values to the list by running {@link SQL#readResultSet(java.sql.ResultSet)} on
+	 * the result set.
+	 *
+	 * @param resultSet the result set to handle.
+	 * @return true always.
+	 * @throws SQLException if there was an exception reading from the result set.
+	 */
+	public boolean process(ResultSet resultSet) throws SQLException
 	{
-		m_value.add((D) SQL.readResultSet(result));
+		getResult().add((D) SQL.readResultSet(resultSet));
 		return true;
 	}
 }

@@ -6,5 +6,7 @@
  * connections with built in pooling capability, and the possibility
  * to create fake db proxies ({@link xtras.sql.DbProxyFake}) that return programatically generated
  * results.
+ * <p/>
+ * <em>The DB classes are still experimental and not recommended for use yet.</em>
  */
 package xtras.sql;

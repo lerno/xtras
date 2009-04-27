@@ -81,6 +81,7 @@ public final class Db
 	private final static Object LOCK = new Object();
 	private final static Map<String, DbProxy> s_dbs = new HashMap<String, DbProxy>();
 	private final static ThreadLocal<DbProxy> s_activeDb = new ThreadLocal<DbProxy>();
+
 	private static DbProxy s_defaultDb = null;
 
 	/**
@@ -174,7 +175,7 @@ public final class Db
 	 * @param key the key to retrieve the db for.
 	 * @return the db or null if there is no db with this name.
 	 */
-	static DbProxy getDb(String key)
+	public static DbProxy getDb(String key)
 	{
 		DbProxy db;
 		synchronized (LOCK)

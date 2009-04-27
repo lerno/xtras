@@ -102,27 +102,28 @@ public final class Db
 	                            String username,
 	                            String password, int poolSize) throws ClassNotFoundException
 	{
-		registerDb(new PooledDbProxy(key, driverClassName, url, username, password, poolSize));
+		registerDb(key, new PooledDbProxy(driverClassName, url, username, password, poolSize));
 	}
 
 	/**
 	 * Register a db proxy. This allows a programmer to add customized db proxy implementations
 	 * instead of the default PooledDbProxy.
 	 *
+	 * @param key string to identify this particular DbProxy.
 	 * @param dbProxy the database proxy to register.
 	 * @throws IllegalStateException if a proxy with the same name was already registered.
 	 */
-	public static void registerDb(DbProxy dbProxy)
+	public static void registerDb(String key, DbProxy dbProxy)
 	{
 		synchronized (LOCK)
 		{
-			if (s_dbs.containsKey(dbProxy.getName())) throw new IllegalStateException("Db '" + dbProxy.getName()
-			                                                                          + "' already registered.");
+			if (s_dbs.containsKey(key)) throw new IllegalStateException("Db '" + key
+		                                                               + "' already registered.");
 			if (s_defaultDb == null)
 			{
 				s_defaultDb = dbProxy;
 			}
-			s_dbs.put(dbProxy.getName(), dbProxy);
+			s_dbs.put(key, dbProxy);
 		}
 	}
 

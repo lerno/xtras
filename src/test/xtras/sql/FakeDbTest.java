@@ -17,7 +17,7 @@ public class FakeDbTest extends TestCase
 
 	public void setUp()
 	{
-		m_fakeDb = new FakeDb("fake");
+		m_fakeDb = new FakeDb();
 	}
 
 	public void testInsert() throws Exception
@@ -78,7 +78,7 @@ public class FakeDbTest extends TestCase
 		}
 		catch (SQLException e)
 		{
-			assertEquals("Fake db 'fake' has no answer to the query 'foobar'.", e.getMessage());
+			assertEquals("Fake db has no answer to the query 'foobar'.", e.getMessage());
 		}
 	}
 

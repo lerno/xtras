@@ -11,13 +11,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.sql.SQLException;
 import java.sql.ResultSet;
 
-public class FakeDbTest extends TestCase
+public class DbProxyFakeTest extends TestCase
 {
-	FakeDb m_fakeDb;
+	DbProxyFake m_fakeDb;
 
 	public void setUp()
 	{
-		m_fakeDb = new FakeDb();
+		m_fakeDb = new DbProxyFake();
 	}
 
 	public void testInsert() throws Exception

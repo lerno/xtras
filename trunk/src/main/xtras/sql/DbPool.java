@@ -8,82 +8,166 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-/** @author Christoffer Lerno */
+/**
+ * A DbPool implementation, which lazily allocates a number of
+ * db connections up to its pool size.
+ *
+ * @author Christoffer Lerno
+ */
 public class DbPool
 {
 	private ArrayList<Tuple<Connection, Long>> m_freeConnections;
 	private ArrayList<Connection> m_busyConnections;
 	private final String m_url;
-	private long m_pollTimeout;
+	private long m_acquireTimeout;
 	private int m_poolSize;
 	private String m_username;
 	private String m_password;
 	private volatile boolean m_shutdown;
 
-	public DbPool(String url, String username, String password, int poolSize)
+	/**
+	 * Create a db pool for the given db url and credentials.
+	 *
+	 * @param url the jdbc url to the database resource.
+	 * @param username the username for logging into the database.
+	 * @param password the password for the user.
+	 * @param maxPoolSize the maximum pool size, note that no connections
+	 * will be made when the pool is first created. Instead those will be created
+	 * on-demand.
+	 */
+	public DbPool(String url, String username, String password, int maxPoolSize)
 	{
 		m_url = url;
-		m_freeConnections = new ArrayList<Tuple<Connection, Long>>(poolSize);
-		m_busyConnections = new ArrayList<Connection>(poolSize);
-		m_pollTimeout = Time.TEN_SECONDS;
+		m_freeConnections = new ArrayList<Tuple<Connection, Long>>(maxPoolSize);
+		m_busyConnections = new ArrayList<Connection>(maxPoolSize);
+		m_acquireTimeout = Time.TEN_SECONDS;
 		m_password = password;
 		m_username = username;
-		m_poolSize = poolSize;
+		m_poolSize = maxPoolSize;
 		m_shutdown = false;
 	}
 
-	public void setAcquireTimeout(long pollTimeout)
+	/**
+	 * Sets the maximum time to wait when waiting for a new connection.
+	 * <p/>
+	 * Default is 10000 ms.
+	 *
+	 * @param acquireTimeout the new timeout in ms, a negative value means
+	 * no timeout.
+	 */
+	public void setAcquireTimeout(long acquireTimeout)
 	{
-		m_pollTimeout = pollTimeout;
+		m_acquireTimeout = acquireTimeout;
 	}
 
-	@SuppressWarnings({"JDBCResourceOpenedButNotSafelyClosed"})
+	/**
+	 * Returns the number of ms to wait for a released connection before timing out,
+	 * when trying to acquire a connection from the pool.
+	 * <p/>
+	 * A negative value means no timeout.
+	 *
+	 * @return the number of ms to wait.
+	 */
+	public long getAcquireTimeout()
+	{
+		return m_acquireTimeout;
+	}
+
+	/**
+	 * Acquire a connection from the pool, waiting at the most {@link #getAcquireTimeout} ms
+	 * if there currently are no connections available.
+	 * <p/>
+	 * <em>This method is thread-safe.</em>
+	 *
+	 * @return a java.sql.Connection object.
+	 * @throws SQLException if the pool was shut down or there was a
+	 * timeout waiting for a connection.
+	 */
 	public synchronized Connection acquire() throws SQLException
 	{
-		boolean firstPass = true;
+		long startTime = System.currentTimeMillis();
 		while (true)
 		{
 			if (m_shutdown) throw new SQLException("Db connection already shut down.");
-			if (m_freeConnections.isEmpty() && m_busyConnections.size() < m_poolSize)
-			{
-				addFreeConnection(DriverManager.getConnection(m_url, m_username, m_password));
-			}
-			if (m_freeConnections.isEmpty())
-			{
-				if (firstPass)
-				{
-					try
-					{
-						wait(m_pollTimeout);
-					}
-					catch (InterruptedException e)
-					{
-						throw new SQLException("Interrupt while waiting for connection.");
-					}
-				}
-				else
-				{
-					throw new SQLException("Timeout waiting to acquire db connection, " +
-					                       "exceeded " + Time.timeIntervalToString(m_pollTimeout) +
-					                       ".");
-				}
-			}
-			else
+			createConnectionOnDemand();
+			if (m_freeConnections.size() > 0)
 			{
 				Connection c = m_freeConnections.remove(m_freeConnections.size() - 1).first;
 				m_busyConnections.add(c);
 				return c;
 			}
-			firstPass = false;
+			try
+			{
+				waitForConnection(startTime);
+			}
+			catch (InterruptedException e)
+			{
+				throw new SQLException("Interrupt while waiting for connection.");
+			}
 		}
 	}
 
+	/**
+	 * Performs the internal wait, throwing an exception if the timeout has been reached.
+	 *
+	 * @param startTime the time when the original call was made.
+	 * @throws SQLException if a timeout was detected.
+	 * @throws InterruptedException if the wait was interrupted.
+	 */
+	private void waitForConnection(long startTime) throws SQLException, InterruptedException
+	{
+		if (m_acquireTimeout < 0)
+		{
+			wait();
+			return;
+		}
+		long timeToWait = m_acquireTimeout - System.currentTimeMillis() + startTime;
+		if (timeToWait < 1)
+		{
+			throw new SQLException("Timeout waiting to acquire db connection, " +
+			                       "exceeded " + Time.timeIntervalToString(m_acquireTimeout) +
+			                       ".");
+		}
+		wait(m_acquireTimeout);
+	}
+
+	/**
+	 * Create a new connection if there are no free connections and the pool size
+	 * has not yet been reached.
+	 *
+	 * @throws SQLException if there was an error creating a connection.
+	 */
+	@SuppressWarnings({"JDBCResourceOpenedButNotSafelyClosed"})
+	private void createConnectionOnDemand() throws SQLException
+	{
+		if (m_freeConnections.isEmpty() && m_busyConnections.size() < m_poolSize)
+		{
+			addFreeConnection(DriverManager.getConnection(m_url, m_username, m_password));
+		}
+	}
+
+	/**
+	 * Add a connection to the pool of free connections, together with a timestamp telling
+	 * when this connection was added.
+	 *
+	 * @param connection the connection to add.
+	 */
 	private synchronized void addFreeConnection(Connection connection)
 	{
 		m_freeConnections.add(new Tuple<Connection, Long>(connection, System.currentTimeMillis()));
 	}
 
 
+	/**
+	 * Tests if a connection is ok using the {@code lastCallHadError} flag as
+	 * a hint if the connection should be tested with a simple statement
+	 * to see that the db connection is ok.
+	 *
+	 * @param connection the connection to test.
+	 * @param lastCallHadError a hint that the connection had errors and
+	 * that a diagnostic db query should be made to verify that it is ok.
+	 * @return true if the connection tested ok, false otherwise.
+	 */
 	@SuppressWarnings({"JDBCResourceOpenedButNotSafelyClosed"})
 	boolean connectionIsOk(Connection connection, boolean lastCallHadError)
 	{
@@ -111,6 +195,17 @@ public class DbPool
 		}
 	}
 
+	/**
+	 * Release a connection back to the pool, using a hint {@code lastCallHadError} to
+	 * determine if the connection should be tested before being allowed back into the pool.
+	 * <p/>
+	 * If the connection is not ok <em>and</em> was a member of this pool, it is closed
+	 * and discarded.
+	 *
+	 * @param connection the connection to return to the pool.
+	 * @param lastCallHadError a hint that the connection had errors and should
+	 * be tested before being returned to the pool.
+	 */
 	public void release(Connection connection, boolean lastCallHadError)
 	{
 		boolean connectionOk = connectionIsOk(connection, lastCallHadError);
@@ -119,12 +214,17 @@ public class DbPool
 
 	private synchronized void releaseConnection(Connection connection, boolean connectionOk)
 	{
+		// Ignore connections that might already have been released or does not belong to this pool.
 		if (!m_busyConnections.remove(connection)) return;
 		if (connectionOk)
 		{
 			addFreeConnection(connection);
-			notify();
 		}
+		else
+		{
+			SQL.closeSilently(connection);
+		}
+		notifyAll();
 	}
 
 	public int resizePool(long maxAge)

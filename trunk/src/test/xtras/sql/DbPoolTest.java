@@ -12,6 +12,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class DbPoolTest extends TestCase
 {
@@ -127,7 +128,37 @@ public class DbPoolTest extends TestCase
 		{
 			assertEquals("Timeout waiting to acquire db connection, exceeded 2ms.", e.getMessage());
 		}
+	}
 
+	public void testAcquireNoTimeout() throws Exception
+	{
+		// Steal all connections.
+		Connection c = m_dbPool.acquire();
+		m_dbPool.acquire();
+
+		// Wait indefinately.
+		m_dbPool.setAcquireTimeout(-1);
+
+		Thread t = new Thread()
+		{
+			@Override
+			public void run()
+			{
+				try
+				{
+					m_dbPool.acquire();
+				}
+				catch (SQLException e)
+				{
+					// Ignore.
+				}
+			}
+		};
+		t.start();
+		t.join(30);
+		assertEquals(true, t.isAlive());
+		m_dbPool.release(c, false);
+		t.join();
 	}
 
 	public void testRelease() throws Exception
@@ -156,6 +187,64 @@ public class DbPoolTest extends TestCase
 		m_dbPool.release(c, false);
 		assertEquals(0, m_dbPool.getConnectionsFree());
 		assertEquals(0, m_dbPool.getConnectionsBusy());
+	}
+
+	public void testReleaseClosedConnectionWithTwoWaitingConnections() throws Exception
+	{
+		assertEquals(0, m_dbPool.getConnectionsFree());
+		assertEquals(0, m_dbPool.getConnectionsBusy());
+		Connection c1 = m_dbPool.acquire();
+		Connection c2 = m_dbPool.acquire();
+		final AtomicInteger success = new AtomicInteger(0);
+		Thread t1 = new Thread()
+		{
+			@Override
+			public void run()
+			{
+				try
+				{
+					m_dbPool.acquire();
+					success.incrementAndGet();
+				}
+				catch (SQLException e)
+				{
+					// Ignore
+				}
+			}
+		};
+		Thread t2 = new Thread()
+		{
+			@Override
+			public void run()
+			{
+				try
+				{
+					m_dbPool.acquire();
+					success.incrementAndGet();
+				}
+				catch (SQLException e)
+				{
+					// Ignore
+				}
+			}
+		};
+		assertEquals(0, m_dbPool.getConnectionsFree());
+		assertEquals(2, m_dbPool.getConnectionsBusy());
+		t1.start();
+		t2.start();
+		c1.close();
+		c2.close();
+		m_dbPool.release(c1, false);
+		m_dbPool.release(c2, false);
+		t1.join();
+		t2.join();
+		assertEquals(2, success.get());
+		assertEquals(0, m_dbPool.getConnectionsFree());
+		assertEquals(2, m_dbPool.getConnectionsBusy());
+		m_dbPool.release(c1, false);
+		m_dbPool.release(c2, false);
+		assertEquals(0, m_dbPool.getConnectionsFree());
+		assertEquals(2, m_dbPool.getConnectionsBusy());
 	}
 
 	public void testRepeatRelease() throws Exception
@@ -286,5 +375,11 @@ public class DbPoolTest extends TestCase
 		m_dbPool.release(c2, false);
 		m_dbPool.resizePool(-1);
 		assertEquals(0, m_dbPool.getConnectionsFree());
+	}
+
+	public void testGetAcquireTimeout() throws Exception
+	{
+		m_dbPool.setAcquireTimeout(10);
+		assertEquals(10, m_dbPool.getAcquireTimeout());
 	}
 }

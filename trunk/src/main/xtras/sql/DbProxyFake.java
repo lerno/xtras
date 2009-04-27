@@ -6,20 +6,20 @@ import java.sql.*;
 import java.util.*;
 
 /** @author Christoffer Lerno */
-public class FakeDb implements DbProxy
+public class DbProxyFake implements DbProxy
 {
 	private Map<String, FakeResultGenerator> m_queries;
 	private boolean m_shutdown;
 
-	public FakeDb()
+	public DbProxyFake()
 	{
 		m_shutdown =false;
 		m_queries = new HashMap<String, FakeResultGenerator>();
 	}
 
-	public FakeDb(Map<String, FakeResultGenerator> map)
+	public DbProxyFake(Map<String, FakeResultGenerator> map)
 	{
-		m_shutdown =false;
+		m_shutdown = false;
 		m_queries = map;
 	}
 

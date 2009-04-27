@@ -4,8 +4,6 @@ package xtras.sql;
  */
 
 import junit.framework.*;
-import xtras.util.CollectionExtras;
-
 
 import java.sql.*;
 import java.io.File;
@@ -165,19 +163,22 @@ public class DbTest extends TestCase
 
 	public void testRegisterFake() throws Exception
 	{
-		Db.registerDb("fake", new DbProxyFake(CollectionExtras.mapFromKeyValuePairs("select 1", new FakeResultGenerator()
+		DbProxyFake fake = new DbProxyFake();
+		Db.registerDb("fake", fake);
+		fake.addQuery("select 1", new FakeResultGenerator()
 		{
 			public Object[] createResult(int row, Object[] arguments)
 			{
 				return row == 0 ? new Object[]{2} : null;
 			}
-		}, "select some stuff", new FakeResultGenerator()
+		});
+		fake.addQuery("select some stuff", new FakeResultGenerator()
 		{
 			public Object[] createResult(int row, Object[] arguments)
 			{
 				return row < 4 ? new Object[]{row * (Integer) arguments[0], row * (Integer) arguments[1]} : null;
 			}
-		})));
+		});
 		Db.select("fake");
 		assertEquals(2, Db.queryOne("select 1"));
 		int index = 0;

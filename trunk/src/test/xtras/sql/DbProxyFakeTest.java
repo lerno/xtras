@@ -34,6 +34,15 @@ public class DbProxyFakeTest extends TestCase
 
 	public void testAddQuery() throws Exception
 	{
+		m_fakeDb.addQuery("select * from thetable where key > ?", new FakeResultGenerator()
+		{
+			public Object[] createResult(int row, Object[] arguments)
+			{
+				return row > 3 ? null : new Object[]{"name" + (row + (Integer) arguments[0])};
+			}
+		});
+
+		assertEquals("[name5, name6, name7, name8]", m_fakeDb.query(new AllResultProcessor(), "select * from thetable where key > ?", 5).toString());
 		m_fakeDb.addQuery("select * from any where y = ?", new FakeResultGenerator()
 		{
 			public Object[] createResult(int row, Object[] arguments)
@@ -42,13 +51,8 @@ public class DbProxyFakeTest extends TestCase
 			}
 		});
 		final AtomicInteger i = new AtomicInteger(0);
-		m_fakeDb.query(new ResultProcessor()
+		m_fakeDb.query(new AbstractResultProcessor()
 		{
-			public Object getResult()
-			{
-				return null;
-			}
-
 			public boolean process(ResultSet result) throws SQLException
 			{
 				assertEquals(i.getAndIncrement() * 3, result.getObject(1));

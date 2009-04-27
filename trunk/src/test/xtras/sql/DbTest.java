@@ -165,7 +165,7 @@ public class DbTest extends TestCase
 
 	public void testRegisterFake() throws Exception
 	{
-		Db.registerDb(new FakeDb("fake", CollectionExtras.mapFromKeyValuePairs("select 1", new FakeResultGenerator()
+		Db.registerDb("fake", new FakeDb(CollectionExtras.mapFromKeyValuePairs("select 1", new FakeResultGenerator()
 		{
 			public Object[] createResult(int row, Object[] arguments)
 			{

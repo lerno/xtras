@@ -9,19 +9,16 @@ import java.util.*;
 public class FakeDb implements DbProxy
 {
 	private Map<String, FakeResultGenerator> m_queries;
-	private final String m_key;
 	private boolean m_shutdown;
 
-	public FakeDb(String key)
+	public FakeDb()
 	{
-		m_key = key;
 		m_shutdown =false;
 		m_queries = new HashMap<String, FakeResultGenerator>();
 	}
 
-	public FakeDb(String key, Map<String, FakeResultGenerator> map)
+	public FakeDb(Map<String, FakeResultGenerator> map)
 	{
-		m_key = key;
 		m_shutdown =false;
 		m_queries = map;
 	}
@@ -53,15 +50,10 @@ public class FakeDb implements DbProxy
 	 */
 	public void commit() {}
 
-	public String getName()
-	{
-		return m_key;
-	}
-
 	private FakeResultSet getResult(String query, Object[] args) throws SQLException
 	{
 		FakeResultGenerator generator = m_queries.get(query);
-		if (generator == null) throw new SQLException("Fake db '" + m_key + "' has no answer to the query '" + query + "'.");
+		if (generator == null) throw new SQLException("Fake db has no answer to the query '" + query + "'.");
 		return new FakeResultSet(generator, args);
 	}
 

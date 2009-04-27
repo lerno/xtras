@@ -116,7 +116,7 @@ public class DbPoolTest extends TestCase
 		m_dbPool.acquire();
 
 		// Wait 2 ms
-		m_dbPool.setPollTimeout(2);
+		m_dbPool.setAcquireTimeout(2);
 
 		try
 		{

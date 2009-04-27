@@ -32,7 +32,7 @@ public class DbPool
 		m_shutdown = false;
 	}
 
-	public void setPollTimeout(long pollTimeout)
+	public void setAcquireTimeout(long pollTimeout)
 	{
 		m_pollTimeout = pollTimeout;
 	}
@@ -154,8 +154,18 @@ public class DbPool
 		return removedConnections;
 	}
 
+	/**
+	 * Causes this db pool to shutdown and release all its connections.
+	 * <p/>
+	 * All connections, both free and busy will be closed and all
+	 * references to the connections will be purged. The pool is then set
+	 * in shutdown state and cannot be used.
+	 * <p/>
+	 * <em>This method is thread-safe.</em>
+	 */
 	public synchronized void shutdown()
 	{
+		if (m_shutdown) return;
 		for (Tuple<Connection, Long> tuple : m_freeConnections)
 		{
 			SQL.closeSilently(tuple.first);
@@ -170,6 +180,11 @@ public class DbPool
 		notifyAll();
 	}
 
+	/**
+	 * Checks if this pool has been shutdown or not.
+	 *
+	 * @return false if this pool is shutdown, true otherwise.
+	 */
 	public boolean isValid()
 	{
 		return !m_shutdown;
@@ -189,11 +204,22 @@ public class DbPool
 		       + (m_shutdown ? "SHUTDOWN" : getConnectionsFree() + " free, " + getConnectionsBusy() + " busy") + "]";
 	}
 
+	/**
+	 * Retrieves the number of connections that are currently acquired from
+	 * the pool and have yet to be released back.
+	 *
+	 * @return the number of busy connections.
+	 */
 	public synchronized int getConnectionsBusy()
 	{
 		return m_busyConnections.size();
 	}
 
+	/**
+	 * Retrieves the number of connections in the pool that are free to use.
+	 *
+	 * @return the number of free connections.
+	 */
 	public synchronized int getConnectionsFree()
 	{
 		return m_freeConnections.size();

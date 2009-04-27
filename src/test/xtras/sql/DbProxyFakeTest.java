@@ -43,6 +43,15 @@ public class DbProxyFakeTest extends TestCase
 		});
 
 		assertEquals("[name5, name6, name7, name8]", m_fakeDb.query(new AllResultProcessor(), "select * from thetable where key > ?", 5).toString());
+
+		m_fakeDb.addQuery("select a + b where a = ? AND b = ?", new FakeResultGenerator()
+		{
+			public Object[] createResult(int row, Object[] arguments)
+			{
+				return row == 0 ? new Object[] { (Integer) arguments[0] + (Integer) arguments[1] } : null;
+			}
+		});
+		assertEquals(Arrays.asList(42), m_fakeDb.query(new AllResultProcessor(), "select a + b where a = ? AND b = ?", 19, 23));
 		m_fakeDb.addQuery("select * from any where y = ?", new FakeResultGenerator()
 		{
 			public Object[] createResult(int row, Object[] arguments)
